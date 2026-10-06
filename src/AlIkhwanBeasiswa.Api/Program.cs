@@ -23,6 +23,7 @@ builder.Services.AddScoped<IPengurusService, PengurusService>();
 builder.Services.AddScoped<IRbacService, RbacService>();
 builder.Services.AddScoped<IPenerimaService, PenerimaService>();
 builder.Services.AddScoped<IBeasiswaService, BeasiswaService>();
+builder.Services.AddScoped<IKaderisasiAlumniService, KaderisasiAlumniService>();
 
 // 3. JWT Authentication & Policy-Based RBAC
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "AlIkhwanSuperSecretKeyForJwtAuthentication2026!@#";
