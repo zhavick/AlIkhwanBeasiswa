@@ -9,7 +9,7 @@ COPY src/AlIkhwanBeasiswa.Infrastructure/*.csproj ./src/AlIkhwanBeasiswa.Infrast
 COPY src/AlIkhwanBeasiswa.Api/*.csproj ./src/AlIkhwanBeasiswa.Api/
 
 # Restore dependencies
-RUN dotnet restore ./src/AlIkhwanBeasiswa.sln
+RUN dotnet restore ./src/AlIkhwanBeasiswa.Api/AlIkhwanBeasiswa.Api.csproj
 
 # Copy the entire source code
 COPY src/ ./src/

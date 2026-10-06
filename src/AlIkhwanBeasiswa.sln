@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlIkhwanBeasiswa.Infrastruc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlIkhwanBeasiswa.Api", "AlIkhwanBeasiswa.Api\AlIkhwanBeasiswa.Api.csproj", "{93EB8AD0-458F-4549-8D80-7487979786BD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AlIkhwanBeasiswa.Tests", "..\tests\AlIkhwanBeasiswa.Tests\AlIkhwanBeasiswa.Tests.csproj", "{C84A3D44-70FF-49D2-8889-1346DB163549}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{93EB8AD0-458F-4549-8D80-7487979786BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93EB8AD0-458F-4549-8D80-7487979786BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{93EB8AD0-458F-4549-8D80-7487979786BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C84A3D44-70FF-49D2-8889-1346DB163549}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C84A3D44-70FF-49D2-8889-1346DB163549}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C84A3D44-70FF-49D2-8889-1346DB163549}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C84A3D44-70FF-49D2-8889-1346DB163549}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
