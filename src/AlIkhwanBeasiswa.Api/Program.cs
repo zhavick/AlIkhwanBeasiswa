@@ -1,6 +1,11 @@
+using System.Text;
+using AlIkhwanBeasiswa.Core.Interfaces;
 using AlIkhwanBeasiswa.Infrastructure.Data;
+using AlIkhwanBeasiswa.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +17,47 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// 2. CORS Policy for Frontend (Vite & Nginx)
+// 2. Dependency Injection Services
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// 3. JWT Authentication & Policy-Based RBAC
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "AlIkhwanSuperSecretKeyForJwtAuthentication2026!@#";
+var key = Encoding.UTF8.GetBytes(jwtKey);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "AlIkhwanBeasiswa",
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "AlIkhwanPortal",
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanVerifyBeasiswa", policy => policy.RequireClaim("permission", "beasiswa.verify"));
+    options.AddPolicy("CanApproveTahap1", policy => policy.RequireClaim("permission", "beasiswa.approve_tahap1"));
+    options.AddPolicy("CanApproveTahap2", policy => policy.RequireClaim("permission", "beasiswa.approve_tahap2"));
+    options.AddPolicy("CanApproveTahap3", policy => policy.RequireClaim("permission", "beasiswa.approve_tahap3"));
+    options.AddPolicy("CanDisburse", policy => policy.RequireClaim("permission", "pencairan.disburse"));
+    options.AddPolicy("CanManagePortal", policy => policy.RequireClaim("permission", "portal.manage"));
+    options.AddPolicy("CanManagePengurus", policy => policy.RequireClaim("permission", "pengurus.manage"));
+    options.AddPolicy("CanManageRbac", policy => policy.RequireClaim("permission", "rbac.manage"));
+});
+
+// 4. CORS Policy for Frontend (Vite & Nginx)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -26,7 +71,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// 3. Swagger with JWT Bearer Definition
+// 5. Swagger with JWT Bearer Definition
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo 
@@ -63,7 +108,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// 4. Initial Database Seeding
+// 6. Initial Database Seeding
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -78,7 +123,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// 5. HTTP Pipeline Configuration
+// 7. HTTP Pipeline Configuration
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -88,7 +133,6 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Static files for uploaded proofs & docs
 var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
 if (!Directory.Exists(uploadsPath))
 {
@@ -103,6 +147,7 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseCors("AllowAll");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
