@@ -19,6 +19,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // 2. Dependency Injection Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPengurusService, PengurusService>();
+builder.Services.AddScoped<IRbacService, RbacService>();
+builder.Services.AddScoped<IPenerimaService, PenerimaService>();
 
 // 3. JWT Authentication & Policy-Based RBAC
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "AlIkhwanSuperSecretKeyForJwtAuthentication2026!@#";
