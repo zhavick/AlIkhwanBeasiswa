@@ -63,9 +63,10 @@ Sistem dibangun menggunakan pendekatan **Decoupled Architecture**:
 ### Tech Stack Pilihan:
 * **Backend**: ASP.NET Core Web API (.NET 8/9, C#)
 * **ORM & Database**: Entity Framework Core + PostgreSQL (`Npgsql.EntityFrameworkCore.PostgreSQL`)
+* **Kontainerisasi & DevOps**: Docker & Docker Compose (Multi-stage build untuk API & React Nginx, persistent volume PostgreSQL)
 * **Keamanan**: JWT Authentication (Access + Refresh Token) + Granular Policy-Based RBAC
 * **Frontend**: ReactJS (TypeScript, Vite, Tailwind CSS, Lucide Icons, Axios, React Router v6)
-* **Penyimpanan Berkas**: Local File System terisolasi / Object Storage untuk kwitansi, bukti transfer, scan rapor/KHS, dan dokumen syarat.
+* **Penyimpanan Berkas**: Local File System terisolasi / Volume Docker untuk kwitansi, bukti transfer, scan rapor/KHS, dan dokumen syarat.
 
 ---
 
@@ -572,10 +573,45 @@ builder.Services.AddAuthorization(options =>
 
 ---
 
-## 7. Rencana Tahapan Eksekusi (Milestones)
+## 7. Arsitektur Kontainerisasi & Docker Compose
 
-1. **Milestone 1 - Inisialisasi Proyek & Database**:
-   * Setup git repository, inisialisasi solusi ASP.NET Core Web API dan project React Vite.
+Sistem dikemas ke dalam lingkungan kontainer yang portabel dan siap dideploy di lingkungan pengembangan maupun produksi:
+
+```
+AlIkhwanBeasiswa/
+├── docker-compose.yml                 # Orkestrasi Database, API Backend, & Frontend
+├── docker-compose.override.yml        # Konfigurasi dev / port mapping lokal
+├── .env.example                       # Contoh environment variables (DB credentials, JWT Secret)
+├── src/
+│   ├── AlIkhwanBeasiswa.Api/
+│   │   └── Dockerfile                 # Multi-stage build .NET 8/9 SDK -> Runtime Alpine/Debian
+│   └── frontend/
+│       ├── Dockerfile                 # Multi-stage build Node.js (Vite build) -> Nginx Alpine
+│       └── nginx.conf                 # Konfigurasi reverse proxy / routing SPA
+```
+
+### Konfigurasi Service di `docker-compose.yml`:
+1. **`db` (PostgreSQL 16)**:
+   * Image: `postgres:16-alpine`
+   * Persistent Volume: `postgres_data:/var/lib/postgresql/data`
+   * Environment: `POSTGRES_DB=alikhwan_beasiswa`, `POSTGRES_USER=postgres`, `POSTGRES_PASSWORD=secret`
+   * Healthcheck untuk memastikan database siap menerima koneksi sebelum API start.
+2. **`api` (ASP.NET Core Web API)**:
+   * Build: `./src/AlIkhwanBeasiswa.Api`
+   * Depends_on: `db` (condition: `service_healthy`)
+   * Environment: Connection string ke PostgreSQL, JWT Secret, File Upload directory.
+   * Persistent Volume: `uploads_data:/app/uploads` (Menyimpan berkas KHS, bukti transfer, foto).
+3. **`frontend` (ReactJS SPA via Nginx)**:
+   * Build: `./src/frontend`
+   * Depends_on: `api`
+   * Ports: `80:80` (Melayani static assets dan mem-proxy `/api` ke container `api`).
+
+---
+
+## 8. Rencana Tahapan Eksekusi (Milestones)
+
+1. **Milestone 1 - Kontainerisasi, Inisialisasi Proyek & Database**:
+   * Setup Dockerfile (.NET API & React), `docker-compose.yml`, dan inisialisasi solusi kode sumber.
    * Pembuatan migrasi PostgreSQL EF Core untuk seluruh skema tabel di atas dan initial seeder (SuperAdmin, Master Roles, Default Permissions).
 2. **Milestone 2 - Core Backend API & RBAC**:
    * Implementasi JWT Authentication, AuthService, PengurusService, dan RbacService.
@@ -588,4 +624,4 @@ builder.Services.AddAuthorization(options =>
    * Pembangunan UI Admin Backoffice lengkap dengan dashboard analitik dan CMS portal.
    * Pembangunan UI Portal Mandiri untuk siswa, mahasiswa, dan alumni.
 6. **Milestone 6 - Integrasi, Validasi, & Pengujian**:
-   * Pengujian end-to-end flow pengajuan, verifikasi, approval, pencairan, dan update karir alumni.
+   * Pengujian end-to-end flow pengajuan, verifikasi, approval, pencairan, dan update karir alumni di dalam kontainer Docker.
