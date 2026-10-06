@@ -1,0 +1,181 @@
+Table IkhwanOrangTua [headercolor: #175e7a] {
+	orangTuaID int [ pk, increment, not null ]
+	namaAyah varchar(255) [ not null ]
+	namaIbu varchar(255) [ not null ]
+	pekerjaapekerjaanAyah varchar(255)
+	pekerjaanIbu varchar(255)
+	telahMeninggalAyah boolean
+	telahMeninggalIbu boolean
+	noTelpAyah varchar(255)
+	noTelpIbu varchar(255)
+	emailAyah varchar(255) [ not null ]
+	emailIbu varchar(255)
+	informasiTambahan varchar(255)
+}
+
+Table IkhwanSiswa [headercolor: #175e7a] {
+	siswaID int [ pk, increment, not null ]
+	orangTuaID int [ not null ]
+	namaSiswa varchar(255) [ not null ]
+	namaPanggilan varchar(255)
+	tempatLahir varchar(255) [ not null ]
+	tanggalLahir date [ not null ]
+	alamatLengkap varchar(255) [ not null ]
+	noTelp varchar(255) [ not null ]
+	email varchar(255) [ not null ]
+	informasiTambahan varchar(255)
+}
+
+Table IkhwanMahasiswa [headercolor: #175e7a] {
+	mahasiswaID int [ pk, increment, not null ]
+	orangTuaID int [ not null ]
+	namaMahasiswa varchar(255) [ not null ]
+	namaPanggilan varchar(255)
+	tempatLahir varchar(255) [ not null ]
+	tanggalLahir date [ not null ]
+	alamatLengkap varchar(255) [ not null ]
+	noTelp varchar(255) [ not null ]
+	email varchar(255) [ not null ]
+	informasiTambahan varchar(255)
+	calonKaderisasi boolean
+}
+
+Table IkhwanPekerjaan [headercolor: #175e7a] {
+	pekerjaanID int [ pk, increment, not null ]
+	mahasiswaID int [ not null ]
+	namaPerusahaan varchar(255) [ not null ]
+	bulanBergabung int [ not null ]
+	tahunBergabung int [ not null ]
+	masihBekerja boolean
+	bulanSelesai int
+	tahunSelesai int
+	bidangPekerjaan varchar(255) [ not null ]
+	jabatan varchar(255) [ not null ]
+	informasiTambahan varchar(255)
+}
+
+Table IkhwanPendidikan [headercolor: #175e7a] {
+	pendidikanID int [ pk, increment, not null ]
+	siswaID int [ not null ]
+	namaSekolah varchar(255) [ not null ]
+	alamatSekolah varchar(255) [ not null ]
+	jenjang varchar(255) [ not null ]
+	tanggalMasuk date [ not null ]
+	masihDalamPendidian boolean
+	tanggalKeluar date
+	noTelpSekolah varchar(255)
+	emailSekolah varchar(255)
+}
+
+Table IkhwanUniversitas [headercolor: #175e7a] {
+	univID int [ pk, increment, not null ]
+	mahasiswaID int [ not null ]
+	namaUniversitas varchar(255) [ not null ]
+	alamatUniversitas varchar(255)
+	noTelpUniversitas varchar(255)
+	emailUniversitas varchar(255)
+	tanggalMasuk date [ not null ]
+	masihBerjalan boolean
+	jenjang varchar(255) [ not null ]
+	jurusan varchar(255) [ not null ]
+	tanggalLulus varchar(255)
+	jumlahTahun int [ not null ]
+	jumlahSemester int [ not null ]
+	informasiTambahan varchar(255)
+}
+
+Table IkhwanNilaiUniv [headercolor: #175e7a] {
+	nilaiID int [ pk, increment, not null ]
+	univID int [ not null ]
+	mahasiswaID int [ not null ]
+	mataKuliah varchar(255) [ not null ]
+	semester int [ not null ]
+	nilaiUTS decimal
+	nilaiUAS decimal
+	nilaiRata decimal [ not null ]
+	informasiTambahan varchar(255)
+}
+
+Table IkhwanNilaiSekolah [headercolor: #175e7a] {
+	nilaiSekolahID int [ pk, increment, not null ]
+	pendidikanID int [ not null ]
+	siswaID int [ not null ]
+	namaPelajaran varchar(255) [ not null ]
+	semester int [ not null ]
+	nilaiUTS decimal
+	nilaiUAS decimal
+	nilaiRata decimal [ not null ]
+	informasiTambahan varchar
+}
+
+Table IkhwanBeasiswaMahasiswa [headercolor: #175e7a] {
+	beasiswaID int [ pk, increment, not null ]
+	mahasiswaID int [ not null ]
+	nilaiRata decimal [ not null ]
+	paguBeasiswa decimal [ not null ]
+	paguTertanggung decimal [ not null ]
+	telahDibayar boolean
+	tanggalDiterima date [ not null ]
+	approvalPertama varchar(255)
+	approvalKedua varchar(255)
+	approvalTambahan varchar(255)
+	informasiTambahan varchar(255)
+}
+
+Table IkhwanPembayaranBeaMahasiswa [headercolor: #175e7a] {
+	pembayaranBeaMahasiswaID int [ pk, increment, not null ]
+	beasiswaID int [ not null ]
+	mahasiswaID int [ not null ]
+	tanggalPembayaran date [ not null ]
+	biaya decimal [ not null ]
+	buktiPembayaran varchar(255) [ not null ]
+	informasiTambahan varchar(255)
+}
+
+Ref fk_IkhwanOrangTua_orangTuaID_IkhwanMahasiswa {
+	IkhwanOrangTua.orangTuaID < IkhwanMahasiswa.orangTuaID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanOrangTua_orangTuaID_IkhwanSiswa {
+	IkhwanOrangTua.orangTuaID < IkhwanSiswa.orangTuaID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanMahasiswa_mahasiswaID_IkhwanPekerjaan {
+	IkhwanMahasiswa.mahasiswaID < IkhwanPekerjaan.mahasiswaID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanSiswa_siswaID_IkhwanPendidikan {
+	IkhwanSiswa.siswaID < IkhwanPendidikan.siswaID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanMahasiswa_mahasiswaID_IkhwanPembayaranBeaMahasiswa {
+	IkhwanMahasiswa.mahasiswaID < IkhwanPembayaranBeaMahasiswa.mahasiswaID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanSiswa_siswaID_IkhwanNilaiSekolah {
+	IkhwanSiswa.siswaID < IkhwanNilaiSekolah.siswaID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanMahasiswa_mahasiswaID_IkhwanBeasiswaMahasiswa {
+	IkhwanMahasiswa.mahasiswaID < IkhwanBeasiswaMahasiswa.mahasiswaID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanMahasiswa_mahasiswaID_IkhwanUniversitas {
+	IkhwanMahasiswa.mahasiswaID < IkhwanUniversitas.mahasiswaID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanMahasiswa_mahasiswaID_IkhwanNilaiUniv {
+	IkhwanMahasiswa.mahasiswaID < IkhwanNilaiUniv.mahasiswaID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanPendidikan_pendidikanID_IkhwanNilaiSekolah {
+	IkhwanPendidikan.pendidikanID < IkhwanNilaiSekolah.pendidikanID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanUniversitas_univID_IkhwanNilaiUniv {
+	IkhwanUniversitas.univID < IkhwanNilaiUniv.univID [ delete: cascade, update: cascade ]
+}
+
+Ref fk_IkhwanBeasiswaMahasiswa_beasiswaID_IkhwanPembayaranBeaMahasiswa {
+	IkhwanBeasiswaMahasiswa.beasiswaID < IkhwanPembayaranBeaMahasiswa.beasiswaID [ delete: cascade, update: cascade ]
+}
