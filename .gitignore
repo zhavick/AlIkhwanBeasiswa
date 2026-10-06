@@ -1,0 +1,27 @@
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio / VSCode
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Node.js
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Environment variables & secrets
+.env
+
+# Docker data
+uploads/

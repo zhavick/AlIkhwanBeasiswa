@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: alikhwan_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-alikhwan_beasiswa}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d alikhwan_beasiswa"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - alikhwan_network
+
+  api:
+    build:
+      context: .
+      dockerfile: src/AlIkhwanBeasiswa.Api/Dockerfile
+    container_name: alikhwan_api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-alikhwan_beasiswa};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-secret}"
+      Jwt__Key: "${JWT_KEY:-AlIkhwanSuperSecretKeyForJwtAuthentication2026!@#}"
+      Jwt__Issuer: "AlIkhwanBeasiswa"
+      Jwt__Audience: "AlIkhwanPortal"
+    ports:
+      - "${API_PORT:-5000}:5000"
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - alikhwan_network
+
+  frontend:
+    build:
+      context: src/frontend
+      dockerfile: Dockerfile
+    container_name: alikhwan_frontend
+    restart: always
+    depends_on:
+      - api
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    networks:
+      - alikhwan_network
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  alikhwan_network:
+    driver: bridge

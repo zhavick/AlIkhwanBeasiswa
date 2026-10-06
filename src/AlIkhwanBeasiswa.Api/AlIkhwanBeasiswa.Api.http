@@ -1,0 +1,6 @@
+@AlIkhwanBeasiswa.Api_HostAddress = http://localhost:5281
+
+GET {{AlIkhwanBeasiswa.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
