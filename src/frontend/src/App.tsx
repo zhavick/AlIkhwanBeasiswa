@@ -30,6 +30,7 @@ import PortalAkademikPage from './pages/portal/PortalAkademikPage';
 import PortalKaderisasiPage from './pages/portal/PortalKaderisasiPage';
 import PortalAlumniPage from './pages/portal/PortalAlumniPage';
 import PortalHelpdeskPage from './pages/portal/PortalHelpdeskPage';
+import VerifikasiDokumenPage from './pages/portal/VerifikasiDokumenPage';
 
 export function App() {
   return (
@@ -43,6 +44,10 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
+          {/* Public Document Verification Routes */}
+          <Route path="/verifikasi-dokumen/:kode" element={<VerifikasiDokumenPage />} />
+          <Route path="/verifikasi-dokumen" element={<VerifikasiDokumenPage />} />
 
           {/* Portal Layout (Public & Self-Service) */}
           <Route path="/portal" element={<PortalLayout />}>
