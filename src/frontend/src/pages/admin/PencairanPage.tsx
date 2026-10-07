@@ -11,7 +11,9 @@ import {
   Search,
   Upload,
   ExternalLink,
+  Printer,
 } from 'lucide-react';
+import KwitansiPrintModal from '../../components/documents/KwitansiPrintModal';
 
 export const PencairanPage: React.FC = () => {
   const [pencairanList, setPencairanList] = useState<any[]>([]);
@@ -22,6 +24,7 @@ export const PencairanPage: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [selectedPencairanIdForPrint, setSelectedPencairanIdForPrint] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     pengajuanId: 0,
@@ -251,18 +254,19 @@ export const PencairanPage: React.FC = () => {
                 <th className="py-3 px-4">Referensi Bank & Tanggal</th>
                 <th className="py-3 px-4">Bukti Transfer</th>
                 <th className="py-3 px-4">Status & Verifikator</th>
+                <th className="py-3 px-4 text-right">Aksi Dokumen</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400">
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
                     Memuat riwayat pencairan...
                   </td>
                 </tr>
               ) : pencairanList.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-slate-400">
+                  <td colSpan={6} className="py-10 text-center text-slate-400">
                     Belum ada riwayat pencairan dana.
                   </td>
                 </tr>
@@ -320,6 +324,16 @@ export const PencairanPage: React.FC = () => {
                         <div className="text-[10px] text-slate-400">
                           Oleh: {item.dicairkanOleh || 'Bendahara'}
                         </div>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={() => setSelectedPencairanIdForPrint(item.pencairanId)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-200 transition shadow-xs"
+                          title="Cetak Kwitansi / Bukti Pencairan Resmi"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Kwitansi</span>
+                        </button>
                       </td>
                     </tr>
                   );
@@ -462,6 +476,14 @@ export const PencairanPage: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal Cetak Kwitansi */}
+      {selectedPencairanIdForPrint && (
+        <KwitansiPrintModal
+          pencairanId={selectedPencairanIdForPrint}
+          onClose={() => setSelectedPencairanIdForPrint(null)}
+        />
       )}
     </div>
   );

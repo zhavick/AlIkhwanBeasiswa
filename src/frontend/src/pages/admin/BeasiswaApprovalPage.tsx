@@ -15,13 +15,20 @@ import {
   Filter,
   DollarSign,
   Download,
+  Award,
+  Printer,
 } from 'lucide-react';
+import SuratKeteranganPrintModal from '../../components/documents/SuratKeteranganPrintModal';
 
 export const BeasiswaApprovalPage: React.FC = () => {
   const { user, hasRole } = useAuth();
+  const [activeTab, setActiveTab] = useState<'queue' | 'approved'>('queue');
   const [queue, setQueue] = useState<any[]>([]);
+  const [approvedList, setApprovedList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingApproved, setLoadingApproved] = useState(false);
   const [stageFilter, setStageFilter] = useState<'ALL' | 1 | 2 | 3>('ALL');
+  const [selectedAppIdForSkPrint, setSelectedAppIdForSkPrint] = useState<number | null>(null);
 
   const [selectedApp, setSelectedApp] = useState<any | null>(null);
   const [decision, setDecision] = useState<'Approve' | 'Reject' | 'RequestRevision'>('Approve');
@@ -45,9 +52,28 @@ export const BeasiswaApprovalPage: React.FC = () => {
     }
   };
 
+  const fetchApproved = async () => {
+    setLoadingApproved(true);
+    try {
+      const res = await api.get('/beasiswa/pengajuan?status=Approved');
+      setApprovedList(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingApproved(false);
+    }
+  };
+
   useEffect(() => {
     fetchQueue();
+    fetchApproved();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'approved') {
+      fetchApproved();
+    }
+  }, [activeTab]);
 
   const handleSelectApp = async (app: any) => {
     setSelectedApp(app);
@@ -141,6 +167,32 @@ export const BeasiswaApprovalPage: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Main Tab Switcher */}
+          <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 text-xs shadow-xs">
+            <button
+              onClick={() => setActiveTab('queue')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 ${
+                activeTab === 'queue'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <FileCheck2 className="w-3.5 h-3.5" />
+              <span>Antrean Persetujuan ({queue.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('approved')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 ${
+                activeTab === 'approved'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>SK Beasiswa Disetujui ({approvedList.length})</span>
+            </button>
+          </div>
+
           <button
             onClick={handleExportCSV}
             className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-xs transition flex items-center gap-1.5"
@@ -149,48 +201,51 @@ export const BeasiswaApprovalPage: React.FC = () => {
             <Download className="w-3.5 h-3.5 text-slate-500" />
             <span>Export CSV</span>
           </button>
-          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-xs">
-            <button
-              onClick={() => setStageFilter('ALL')}
-              className={`px-2.5 py-1 rounded-md font-bold transition ${
-                stageFilter === 'ALL'
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Semua ({queue.length})
-            </button>
-            <button
-              onClick={() => setStageFilter(1)}
-              className={`px-2.5 py-1 rounded-md font-bold transition ${
-                stageFilter === 1
-                  ? 'bg-emerald-600 text-white'
-                  : 'text-slate-600 hover:text-emerald-700'
-              }`}
-            >
-              Tahap 1
-            </button>
-            <button
-              onClick={() => setStageFilter(2)}
-              className={`px-2.5 py-1 rounded-md font-bold transition ${
-                stageFilter === 2
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-600 hover:text-blue-700'
-              }`}
-            >
-              Tahap 2
-            </button>
-            <button
-              onClick={() => setStageFilter(3)}
-              className={`px-2.5 py-1 rounded-md font-bold transition ${
-                stageFilter === 3
-                  ? 'bg-purple-600 text-white'
-                  : 'text-slate-600 hover:text-purple-700'
-              }`}
-            >
-              Tahap 3
-            </button>
-          </div>
+          
+          {activeTab === 'queue' && (
+            <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-xs">
+              <button
+                onClick={() => setStageFilter('ALL')}
+                className={`px-2.5 py-1 rounded-md font-bold transition ${
+                  stageFilter === 'ALL'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Semua ({queue.length})
+              </button>
+              <button
+                onClick={() => setStageFilter(1)}
+                className={`px-2.5 py-1 rounded-md font-bold transition ${
+                  stageFilter === 1
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-slate-600 hover:text-emerald-700'
+                }`}
+              >
+                Tahap 1
+              </button>
+              <button
+                onClick={() => setStageFilter(2)}
+                className={`px-2.5 py-1 rounded-md font-bold transition ${
+                  stageFilter === 2
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-600 hover:text-blue-700'
+                }`}
+              >
+                Tahap 2
+              </button>
+              <button
+                onClick={() => setStageFilter(3)}
+                className={`px-2.5 py-1 rounded-md font-bold transition ${
+                  stageFilter === 3
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-600 hover:text-purple-700'
+                }`}
+              >
+                Tahap 3
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -211,95 +266,196 @@ export const BeasiswaApprovalPage: React.FC = () => {
         </div>
       )}
 
-      {/* Queue Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Antrean Menunggu Persetujuan ({filteredQueue.length})
-          </h2>
-          <button
-            onClick={fetchQueue}
-            className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold"
-          >
-            Segarkan Data
-          </button>
-        </div>
+      {/* Main Content: Antrean Persetujuan VS SK Beasiswa Disetujui */}
+      {activeTab === 'queue' ? (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Antrean Menunggu Persetujuan ({filteredQueue.length})
+            </h2>
+            <button
+              onClick={fetchQueue}
+              className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold"
+            >
+              Segarkan Data
+            </button>
+          </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
-              <tr>
-                <th className="py-3 px-4">No. Pengajuan & Pemohon</th>
-                <th className="py-3 px-4">Periode & Program</th>
-                <th className="py-3 px-4">Tahapan Approval Saat Ini</th>
-                <th className="py-3 px-4">Nominal Diajukan</th>
-                <th className="py-3 px-4 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400">
-                    Memuat antrean persetujuan...
-                  </td>
+                  <th className="py-3 px-4">No. Pengajuan & Pemohon</th>
+                  <th className="py-3 px-4">Periode & Program</th>
+                  <th className="py-3 px-4">Tahapan Approval Saat Ini</th>
+                  <th className="py-3 px-4">Nominal Diajukan</th>
+                  <th className="py-3 px-4 text-right">Aksi</th>
                 </tr>
-              ) : filteredQueue.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400">
-                    <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2 opacity-80" />
-                    <p className="font-semibold text-slate-600">Semua Antrean Bersih!</p>
-                    <p className="text-[11px] text-slate-400">
-                      Tidak ada permohonan beasiswa yang menunggu persetujuan pada filter ini.
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                filteredQueue.map((item) => (
-                  <tr key={item.pengajuanId} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-slate-900">{item.nomorPengajuan}</div>
-                      <div className="text-slate-600 font-medium">{item.namaPenerima}</div>
-                      <div className="text-[10px] text-slate-400">{item.institusi}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-800">{item.namaPeriode}</div>
-                      <span className="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600">
-                        {item.tipePenerima === 1 ? 'Siswa' : 'Mahasiswa'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                          item.currentApprovalStage === 1
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : item.currentApprovalStage === 2
-                            ? 'bg-blue-50 text-blue-800 border-blue-200'
-                            : 'bg-purple-50 text-purple-800 border-purple-200'
-                        }`}
-                      >
-                        <Clock className="w-3 h-3" />
-                        <span>Tahap {item.currentApprovalStage}: {item.nextApproverRole}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 font-bold text-slate-800">
-                      Rp {item.nominalDiajukan?.toLocaleString('id-ID')}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleSelectApp(item)}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] transition shadow-xs inline-flex items-center gap-1.5"
-                      >
-                        <FileCheck2 className="w-3.5 h-3.5" />
-                        <span>Tinjau & Putuskan</span>
-                      </button>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-400">
+                      Memuat antrean persetujuan...
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : filteredQueue.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                      <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2 opacity-80" />
+                      <p className="font-semibold text-slate-600">Semua Antrean Bersih!</p>
+                      <p className="text-[11px] text-slate-400">
+                        Tidak ada permohonan beasiswa yang menunggu persetujuan pada filter ini.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredQueue.map((item) => (
+                    <tr key={item.pengajuanId} className="hover:bg-slate-50/70 transition">
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-slate-900">{item.nomorPengajuan}</div>
+                        <div className="text-slate-600 font-medium">{item.namaPenerima}</div>
+                        <div className="text-[10px] text-slate-400">{item.institusi}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-slate-800">{item.namaPeriode}</div>
+                        <span className="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600">
+                          {item.tipePenerima === 1 ? 'Siswa' : 'Mahasiswa'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                            item.currentApprovalStage === 1
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : item.currentApprovalStage === 2
+                              ? 'bg-blue-50 text-blue-800 border-blue-200'
+                              : 'bg-purple-50 text-purple-800 border-purple-200'
+                          }`}
+                        >
+                          <Clock className="w-3 h-3" />
+                          <span>Tahap {item.currentApprovalStage}: {item.nextApproverRole}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-bold text-slate-800">
+                        Rp {item.nominalDiajukan?.toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={() => handleSelectApp(item)}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] transition shadow-xs inline-flex items-center gap-1.5"
+                        >
+                          <FileCheck2 className="w-3.5 h-3.5" />
+                          <span>Tinjau & Putuskan</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Tabel Pengajuan Disetujui (Cetak SK Beasiswa) */
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-emerald-600" />
+                <span>Penerbitan Surat Keputusan (SK) Beasiswa Disetujui</span>
+              </h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Daftar pengajuan yang telah disetujui penuh oleh Pimpinan Yayasan dan berhak atas Surat Keputusan (SK) resmi.
+              </p>
+            </div>
+            <button
+              onClick={fetchApproved}
+              className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold"
+            >
+              Segarkan Data
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="py-3 px-4">No. Pengajuan & Penerima</th>
+                  <th className="py-3 px-4">Institusi & Program</th>
+                  <th className="py-3 px-4">Periode Beasiswa</th>
+                  <th className="py-3 px-4">Pagu Disetujui</th>
+                  <th className="py-3 px-4">Status Legalitas</th>
+                  <th className="py-3 px-4 text-right">Aksi Dokumen</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loadingApproved ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      Memuat daftar pengajuan yang telah disetujui...
+                    </td>
+                  </tr>
+                ) : approvedList.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      <Award className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                      <p className="font-semibold text-slate-600">Belum Ada Pengajuan Disetujui</p>
+                      <p className="text-[11px] text-slate-400">
+                        Pengajuan beasiswa yang disetujui penuh oleh Pimpinan Yayasan akan otomatis tampil di sini.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  approvedList.map((item) => (
+                    <tr key={item.pengajuanId} className="hover:bg-slate-50/70 transition">
+                      <td className="py-3 px-4">
+                        <div className="font-mono font-bold text-slate-900">
+                          REG-{String(item.periodeId).padStart(4, '0')}-{String(item.pengajuanId).padStart(4, '0')}
+                        </div>
+                        <div className="text-slate-700 font-semibold mt-0.5">{item.namaPenerima}</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-slate-800">{item.institusiPendidikan || '-'}</div>
+                        <span className="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600">
+                          {item.tipePenerima === 1 ? 'Siswa' : 'Mahasiswa'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">
+                        {item.namaPeriode}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-black text-emerald-700">
+                          Rp {(item.paguTertanggung > 0 ? item.paguTertanggung : item.paguBeasiswa)?.toLocaleString('id-ID')}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Pagu Disetujui Yayasan
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Disetujui Sah</span>
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={() => setSelectedAppIdForSkPrint(item.pengajuanId)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition"
+                          title="Cetak Surat Keputusan (SK) Resmi Yayasan Format A4"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Cetak SK Resmi</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Modal Tinjau & Putuskan */}
       {selectedApp && (
@@ -503,6 +659,14 @@ export const BeasiswaApprovalPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Cetak Surat Keputusan (SK) */}
+      {selectedAppIdForSkPrint && (
+        <SuratKeteranganPrintModal
+          pengajuanId={selectedAppIdForSkPrint}
+          onClose={() => setSelectedAppIdForSkPrint(null)}
+        />
       )}
     </div>
   );
