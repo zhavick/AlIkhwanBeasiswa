@@ -19,24 +19,29 @@ public class PenerimaService : IPenerimaService
     // --- SISWA ---
     public async Task<List<SiswaListDto>> GetAllSiswaAsync()
     {
-        return await _context.Siswa
+        var list = await _context.Siswa
             .Include(s => s.OrangTua)
             .Include(s => s.RiwayatPendidikan)
             .Include(s => s.DaftarNilai)
             .OrderByDescending(s => s.SiswaId)
-            .Select(s => new SiswaListDto
+            .ToListAsync();
+
+        return list.Select(s =>
+        {
+            var latestSchool = s.RiwayatPendidikan.OrderByDescending(p => p.PendidikanId).FirstOrDefault();
+            return new SiswaListDto
             {
                 SiswaId = s.SiswaId,
                 NamaSiswa = s.NamaSiswa,
                 NamaPanggilan = s.NamaPanggilan,
-                Jenjang = s.RiwayatPendidikan.OrderByDescending(p => p.PendidikanId).Select(p => p.Jenjang).FirstOrDefault() ?? "SMA",
-                NamaSekolah = s.RiwayatPendidikan.OrderByDescending(p => p.PendidikanId).Select(p => p.NamaSekolah).FirstOrDefault() ?? "-",
+                Jenjang = latestSchool?.Jenjang ?? "SMA",
+                NamaSekolah = latestSchool?.NamaSekolah ?? "-",
                 NoTelp = s.NoTelp,
                 Email = s.Email,
-                NilaiRataRataTerakhir = s.DaftarNilai.Any() ? s.DaftarNilai.Average(n => n.NilaiRata) : 0,
+                NilaiRataRataTerakhir = s.DaftarNilai.Any() ? Math.Round(s.DaftarNilai.Average(n => n.NilaiRata), 2) : 0,
                 IsYatimPiatu = s.OrangTua != null && (s.OrangTua.TelahMeninggalAyah || s.OrangTua.TelahMeninggalIbu)
-            })
-            .ToListAsync();
+            };
+        }).ToList();
     }
 
     public async Task<SiswaDetailDto?> GetSiswaByIdAsync(int siswaId)
@@ -121,25 +126,30 @@ public class PenerimaService : IPenerimaService
     // --- MAHASISWA ---
     public async Task<List<MahasiswaListDto>> GetAllMahasiswaAsync()
     {
-        return await _context.Mahasiswa
+        var list = await _context.Mahasiswa
             .Include(m => m.OrangTua)
             .Include(m => m.RiwayatUniversitas)
             .Include(m => m.DaftarNilai)
             .OrderByDescending(m => m.MahasiswaId)
-            .Select(m => new MahasiswaListDto
+            .ToListAsync();
+
+        return list.Select(m =>
+        {
+            var latestUniv = m.RiwayatUniversitas.OrderByDescending(u => u.UnivId).FirstOrDefault();
+            return new MahasiswaListDto
             {
                 MahasiswaId = m.MahasiswaId,
                 NamaMahasiswa = m.NamaMahasiswa,
                 NamaPanggilan = m.NamaPanggilan,
-                NamaUniversitas = m.RiwayatUniversitas.OrderByDescending(u => u.UnivId).Select(u => u.NamaUniversitas).FirstOrDefault() ?? "-",
-                Jurusan = m.RiwayatUniversitas.OrderByDescending(u => u.UnivId).Select(u => u.Jurusan).FirstOrDefault() ?? "-",
-                Jenjang = m.RiwayatUniversitas.OrderByDescending(u => u.UnivId).Select(u => u.Jenjang).FirstOrDefault() ?? "S1",
+                NamaUniversitas = latestUniv?.NamaUniversitas ?? "-",
+                Jurusan = latestUniv?.Jurusan ?? "-",
+                Jenjang = latestUniv?.Jenjang ?? "S1",
                 StatusAkademik = m.StatusAkademik,
-                IPK = m.DaftarNilai.Any() ? m.DaftarNilai.Average(n => n.NilaiRata) : 0,
+                IPK = m.DaftarNilai.Any() ? Math.Round(m.DaftarNilai.Average(n => n.NilaiRata), 2) : 0,
                 CalonKaderisasi = m.CalonKaderisasi,
                 IsYatimPiatu = m.OrangTua != null && (m.OrangTua.TelahMeninggalAyah || m.OrangTua.TelahMeninggalIbu)
-            })
-            .ToListAsync();
+            };
+        }).ToList();
     }
 
     public async Task<MahasiswaDetailDto?> GetMahasiswaByIdAsync(int mahasiswaId)

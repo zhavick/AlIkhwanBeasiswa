@@ -24,8 +24,8 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      if (!window.location.search.includes('login=true')) {
+        window.location.href = '/portal?login=true';
       }
     }
     return Promise.reject(error);

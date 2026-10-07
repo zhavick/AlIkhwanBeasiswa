@@ -71,6 +71,13 @@ public class KaderisasiAlumniService : IKaderisasiAlumniService
         };
     }
 
+    public async Task<KaderisasiProfilDto?> GetKaderByUserIdAsync(int userId)
+    {
+        var profile = await _context.UserProfiles.FirstOrDefaultAsync(up => up.UserId == userId);
+        if (profile?.MahasiswaId == null) return null;
+        return await GetKaderByMahasiswaIdAsync(profile.MahasiswaId.Value);
+    }
+
     public async Task<bool> UpdateKaderProfilAsync(int mahasiswaId, UpdateKaderisasiProfilDto request)
     {
         var kp = await _context.KaderisasiProfil.FirstOrDefaultAsync(x => x.MahasiswaId == mahasiswaId);
@@ -240,6 +247,13 @@ public class KaderisasiAlumniService : IKaderisasiAlumniService
             KeselarasanJurusan = t.KeselarasanJurusan,
             InformasiTambahan = t.InformasiTambahan
         };
+    }
+
+    public async Task<AlumniTracerDto?> GetTracerByUserIdAsync(int userId)
+    {
+        var profile = await _context.UserProfiles.FirstOrDefaultAsync(up => up.UserId == userId);
+        if (profile?.MahasiswaId == null) return null;
+        return await GetTracerByMahasiswaIdAsync(profile.MahasiswaId.Value);
     }
 
     public async Task<bool> UpdateTracerAsync(int mahasiswaId, UpdateAlumniTracerDto request)

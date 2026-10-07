@@ -19,6 +19,8 @@ public class PengurusService : IPengurusService
     {
         return await _context.Pengurus
             .Include(p => p.User)
+                .ThenInclude(u => u!.UserRoles)
+                    .ThenInclude(ur => ur.Role)
             .OrderByDescending(p => p.PengurusId)
             .Select(p => new PengurusDto
             {
@@ -36,7 +38,9 @@ public class PengurusService : IPengurusService
                 TanggalMulaiMenjabat = p.TanggalMulaiMenjabat,
                 TanggalAkhirMenjabat = p.TanggalAkhirMenjabat,
                 StatusAktif = p.StatusAktif,
-                FotoProfilUrl = p.FotoProfilUrl
+                FotoProfilUrl = p.FotoProfilUrl,
+                Roles = p.User != null ? p.User.UserRoles.Select(ur => ur.Role!.RoleName).ToList() : new List<string>(),
+                RoleIds = p.User != null ? p.User.UserRoles.Select(ur => ur.RoleId).ToList() : new List<int>()
             })
             .ToListAsync();
     }
@@ -45,6 +49,8 @@ public class PengurusService : IPengurusService
     {
         var p = await _context.Pengurus
             .Include(p => p.User)
+                .ThenInclude(u => u!.UserRoles)
+                    .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(x => x.PengurusId == id);
 
         if (p == null) return null;
@@ -65,7 +71,9 @@ public class PengurusService : IPengurusService
             TanggalMulaiMenjabat = p.TanggalMulaiMenjabat,
             TanggalAkhirMenjabat = p.TanggalAkhirMenjabat,
             StatusAktif = p.StatusAktif,
-            FotoProfilUrl = p.FotoProfilUrl
+            FotoProfilUrl = p.FotoProfilUrl,
+            Roles = p.User != null ? p.User.UserRoles.Select(ur => ur.Role!.RoleName).ToList() : new List<string>(),
+            RoleIds = p.User != null ? p.User.UserRoles.Select(ur => ur.RoleId).ToList() : new List<int>()
         };
     }
 
@@ -116,6 +124,11 @@ public class PengurusService : IPengurusService
         _context.Pengurus.Add(pengurus);
         await _context.SaveChangesAsync();
 
+        var createdRoleNames = await _context.Roles
+            .Where(r => request.RoleIds.Contains(r.RoleId))
+            .Select(r => r.RoleName)
+            .ToListAsync();
+
         return new PengurusDto
         {
             PengurusId = pengurus.PengurusId,
@@ -130,7 +143,9 @@ public class PengurusService : IPengurusService
             Email = pengurus.Email,
             AlamatLengkap = pengurus.AlamatLengkap,
             TanggalMulaiMenjabat = pengurus.TanggalMulaiMenjabat,
-            StatusAktif = pengurus.StatusAktif
+            StatusAktif = pengurus.StatusAktif,
+            Roles = createdRoleNames,
+            RoleIds = request.RoleIds
         };
     }
 
@@ -173,6 +188,11 @@ public class PengurusService : IPengurusService
 
         await _context.SaveChangesAsync();
 
+        var updatedRoles = await _context.UserRoles
+            .Where(ur => ur.UserId == pengurus.UserId)
+            .Include(ur => ur.Role)
+            .ToListAsync();
+
         return new PengurusDto
         {
             PengurusId = pengurus.PengurusId,
@@ -188,7 +208,9 @@ public class PengurusService : IPengurusService
             AlamatLengkap = pengurus.AlamatLengkap,
             TanggalMulaiMenjabat = pengurus.TanggalMulaiMenjabat,
             TanggalAkhirMenjabat = pengurus.TanggalAkhirMenjabat,
-            StatusAktif = pengurus.StatusAktif
+            StatusAktif = pengurus.StatusAktif,
+            Roles = updatedRoles.Where(ur => ur.Role != null).Select(ur => ur.Role!.RoleName).ToList(),
+            RoleIds = updatedRoles.Select(ur => ur.RoleId).ToList()
         };
     }
 

@@ -25,3 +25,9 @@ dist-ssr/
 
 # Docker data
 uploads/
+
+# SQLite & local databases
+*.db
+*.db-shm
+*.db-wal
+

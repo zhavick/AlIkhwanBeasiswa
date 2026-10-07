@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AlIkhwanBeasiswa.Core.DTOs;
 using AlIkhwanBeasiswa.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +25,20 @@ public class KaderisasiController : ControllerBase
         return Ok(list);
     }
 
+    [HttpGet("my-profil")]
+    public async Task<IActionResult> GetMyProfil()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var kader = await _kaderisasiService.GetKaderByUserIdAsync(userId);
+        if (kader == null) return NotFound(new { message = "Profil kader untuk user ini belum terdaftar." });
+        return Ok(kader);
+    }
+
     [HttpGet("kader/{mahasiswaId}")]
     public async Task<IActionResult> GetKaderById(int mahasiswaId)
     {
@@ -47,6 +62,12 @@ public class KaderisasiController : ControllerBase
         return Ok(list);
     }
 
+    [HttpGet("agenda")]
+    public async Task<IActionResult> GetAllAgendaAlias()
+    {
+        return await GetAllKegiatan();
+    }
+
     [HttpPost("kegiatan")]
     public async Task<IActionResult> CreateKegiatan([FromBody] CreateKegiatanDto request)
     {
@@ -54,9 +75,28 @@ public class KaderisasiController : ControllerBase
         return Ok(created);
     }
 
+    [HttpPost("agenda")]
+    public async Task<IActionResult> CreateAgendaAlias([FromBody] CreateKegiatanDto request)
+    {
+        return await CreateKegiatan(request);
+    }
+
     [HttpPost("presensi")]
     public async Task<IActionResult> RecordPresensi([FromBody] InputPresensiDto request)
     {
+        if (request.MahasiswaId == 0)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+            if (int.TryParse(userIdClaim, out var userId))
+            {
+                var kader = await _kaderisasiService.GetKaderByUserIdAsync(userId);
+                if (kader != null)
+                {
+                    request.MahasiswaId = kader.MahasiswaId;
+                }
+            }
+        }
+
         var result = await _kaderisasiService.RecordPresensiAsync(request);
         return Ok(new { message = "Presensi kehadiran berhasil disimpan." });
     }

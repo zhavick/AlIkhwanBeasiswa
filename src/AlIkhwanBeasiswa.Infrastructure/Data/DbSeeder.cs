@@ -16,12 +16,26 @@ public static class DbSeeder
 
         try
         {
-            // Pastikan database telah dibuat / termigrasi jika memungkinkan
-            await context.Database.MigrateAsync();
+            if (context.Database.IsSqlite())
+            {
+                await context.Database.EnsureCreatedAsync();
+            }
+            else
+            {
+                await context.Database.MigrateAsync();
+            }
         }
         catch (Exception ex)
         {
-            logger?.LogWarning(ex, "Database migration failed during startup (database server might not be running yet). Continuing with memory check.");
+            logger?.LogWarning(ex, "Database migration failed during startup ({Message}). Attempting EnsureCreated...", ex.Message);
+            try
+            {
+                await context.Database.EnsureCreatedAsync();
+            }
+            catch (Exception ex2)
+            {
+                logger?.LogError(ex2, "EnsureCreated also failed.");
+            }
         }
 
         // 1. Seed Roles

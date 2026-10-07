@@ -17,7 +17,11 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (usernameOrEmail: string, password: string) => Promise<void>;
+  isLoginModalOpen: boolean;
+  redirectPathAfterLogin: string | null;
+  openLoginModal: (redirectAfterLogin?: string) => void;
+  closeLoginModal: () => void;
+  login: (usernameOrEmail: string, password: string) => Promise<User>;
   registerPenerima: (data: any) => Promise<void>;
   logout: () => void;
   hasRole: (role: string) => boolean;
@@ -30,6 +34,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Modal State
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [redirectPathAfterLogin, setRedirectPathAfterLogin] = useState<string | null>(null);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
@@ -46,7 +54,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   }, []);
 
-  const login = async (usernameOrEmail: string, password: string) => {
+  const openLoginModal = (redirectAfterLogin?: string) => {
+    if (redirectAfterLogin) {
+      setRedirectPathAfterLogin(redirectAfterLogin);
+    }
+    setIsLoginModalOpen(true);
+  };
+
+  const closeLoginModal = () => {
+    setIsLoginModalOpen(false);
+    setRedirectPathAfterLogin(null);
+  };
+
+  const login = async (usernameOrEmail: string, password: string): Promise<User> => {
     const response = await api.post('/auth/login', { usernameOrEmail, password });
     const data = response.data;
 
@@ -66,6 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(userData));
+
+    setIsLoginModalOpen(false);
+    return userData;
   };
 
   const registerPenerima = async (data: any) => {
@@ -95,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    window.location.href = '/portal';
   };
 
   const hasRole = (role: string) => {
@@ -117,6 +140,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isAuthenticated: !!token && !!user,
         loading,
+        isLoginModalOpen,
+        redirectPathAfterLogin,
+        openLoginModal,
+        closeLoginModal,
         login,
         registerPenerima,
         logout,
@@ -136,3 +163,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export default AuthContext;

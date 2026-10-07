@@ -342,7 +342,7 @@ export const RegisterPage: React.FC = () => {
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-            <Link to="/login" className="text-xs text-slate-600 hover:text-emerald-700">
+            <Link to="/portal?login=true" className="text-xs text-slate-600 hover:text-emerald-700">
               Sudah memiliki akun? Masuk
             </Link>
             <button

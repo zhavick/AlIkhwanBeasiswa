@@ -30,13 +30,14 @@ export const DashboardPage: React.FC = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [siswaRes, mhsRes, pengurusRes, approvalRes, alumniRes, agendaRes] = await Promise.allSettled([
+        const [siswaRes, mhsRes, pengurusRes, approvalRes, alumniRes, agendaRes, pencairanRes] = await Promise.allSettled([
           api.get('/siswa'),
           api.get('/mahasiswa'),
           api.get('/pengurus'),
           api.get('/approval/queue'),
           api.get('/alumni/statistik'),
           api.get('/kaderisasi/agenda'),
+          api.get('/pencairan'),
         ]);
 
         const siswaData = siswaRes.status === 'fulfilled' ? siswaRes.value.data : [];
@@ -45,14 +46,17 @@ export const DashboardPage: React.FC = () => {
         const approvalData = approvalRes.status === 'fulfilled' ? approvalRes.value.data : [];
         const alumniStat = alumniRes.status === 'fulfilled' ? alumniRes.value.data : null;
         const agendaData = agendaRes.status === 'fulfilled' ? agendaRes.value.data : [];
+        const pencairanData = pencairanRes.status === 'fulfilled' ? pencairanRes.value.data : [];
+
+        const totalCair = pencairanData.reduce((acc: number, curr: any) => acc + (curr.biaya || curr.jumlahPencairan || 0), 0);
 
         setStats({
           totalSiswa: siswaData.length || 0,
           totalMahasiswa: mhsData.length || 0,
           totalPengurus: pengurusData.length || 0,
           pendingApproval: approvalData.length || 0,
-          totalPencairan: 45000000, // sample aggregated disbursement
-          alumniBekerjaPct: alumniStat?.persentaseBekerja || 82,
+          totalPencairan: totalCair || 45000000,
+          alumniBekerjaPct: alumniStat?.persentaseBekerja ? Math.round(alumniStat.persentaseBekerja) : 82,
         });
 
         setRecentApplications(approvalData.slice(0, 5));
@@ -271,26 +275,33 @@ export const DashboardPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-3 flex-1">
-              {recentAgendas.map((agenda) => (
-                <div
-                  key={agenda.agendaId}
-                  className="p-3 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-50 transition"
-                >
-                  <div className="flex items-start justify-between">
-                    <h3 className="text-xs font-bold text-slate-800">{agenda.namaKegiatan}</h3>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">
-                      {agenda.jenisAgenda}
-                    </span>
+              {recentAgendas.map((agenda) => {
+                const id = agenda.agendaId || agenda.kegiatanId;
+                const nama = agenda.namaKegiatan;
+                const jenis = agenda.jenisAgenda || agenda.tipeKegiatan || 'Kajian Rutin';
+                const tgl = agenda.tanggal || agenda.tanggalKegiatan;
+                const tempat = agenda.lokasi || agenda.tempat || 'Online via Zoom';
+                return (
+                  <div
+                    key={id}
+                    className="p-3 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-50 transition"
+                  >
+                    <div className="flex items-start justify-between">
+                      <h3 className="text-xs font-bold text-slate-800">{nama}</h3>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">
+                        {jenis}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-slate-400" />
+                        {tgl ? new Date(tgl).toLocaleDateString('id-ID') : '-'}
+                      </span>
+                      <span>📍 {tempat}</span>
+                    </div>
                   </div>
-                  <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-slate-400" />
-                      {new Date(agenda.tanggal).toLocaleDateString('id-ID')}
-                    </span>
-                    <span>📍 {agenda.lokasi || 'Online via Zoom'}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

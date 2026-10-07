@@ -85,6 +85,15 @@ public class ApprovalRequestDto
     public string? CatatanApproval { get; set; }
 }
 
+public class ApprovalProcessGenericDto
+{
+    public int PengajuanId { get; set; }
+    public string Decision { get; set; } = "Approve";
+    public string? Catatan { get; set; }
+    public decimal? PaguTertanggungDisetujui { get; set; }
+    public int? Tahap { get; set; }
+}
+
 public class ApprovalHistoryDto
 {
     public int ApprovalId { get; set; }
@@ -99,8 +108,10 @@ public class PencairanRequestDto
 {
     public int PengajuanId { get; set; }
     public int TerminKe { get; set; } = 1;
-    public DateTime TanggalPembayaran { get; set; }
+    public DateTime TanggalPembayaran { get; set; } = DateTime.UtcNow;
+    public DateTime? TanggalPencairan { get => TanggalPembayaran; set => TanggalPembayaran = value ?? DateTime.UtcNow; }
     public decimal Biaya { get; set; }
+    public decimal JumlahPencairan { get => Biaya; set => Biaya = value; }
     public string BuktiPembayaran { get; set; } = string.Empty;
     public string? NomorReferensiBank { get; set; }
     public string? InformasiTambahan { get; set; }
@@ -112,7 +123,9 @@ public class PencairanDto
     public int PengajuanId { get; set; }
     public int TerminKe { get; set; }
     public DateTime TanggalPembayaran { get; set; }
+    public DateTime TanggalPencairan => TanggalPembayaran;
     public decimal Biaya { get; set; }
+    public decimal JumlahPencairan => Biaya;
     public string BuktiPembayaran { get; set; } = string.Empty;
     public string? NomorReferensiBank { get; set; }
     public StatusPencairan StatusPencairan { get; set; }

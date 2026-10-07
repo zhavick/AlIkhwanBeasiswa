@@ -30,7 +30,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/portal?login=true" state={{ from: location }} replace />;
   }
 
   if (requiredRole && !hasRole(requiredRole)) {

@@ -145,6 +145,67 @@ public class BeasiswaService : IBeasiswaService
             .ToListAsync();
     }
 
+    public async Task<List<PengajuanBeasiswaListDto>> GetPengajuanByUserIdAsync(int userId)
+    {
+        var profile = await _context.UserProfiles.FirstOrDefaultAsync(up => up.UserId == userId);
+        if (profile == null) return new List<PengajuanBeasiswaListDto>();
+
+        return await GetPengajuanByPenerimaAsync(profile.SiswaId, profile.MahasiswaId);
+    }
+
+    public async Task<List<PengajuanBeasiswaListDto>> GetPengajuanByPenerimaAsync(int? siswaId, int? mahasiswaId)
+    {
+        var query = _context.PengajuanBeasiswa
+            .Include(pb => pb.Periode)
+            .Include(pb => pb.Siswa)
+                .ThenInclude(s => s!.RiwayatPendidikan)
+            .Include(pb => pb.Mahasiswa)
+                .ThenInclude(m => m!.RiwayatUniversitas)
+            .Include(pb => pb.DaftarApproval)
+            .AsQueryable();
+
+        if (siswaId.HasValue && mahasiswaId.HasValue)
+        {
+            query = query.Where(pb => pb.SiswaId == siswaId.Value || pb.MahasiswaId == mahasiswaId.Value);
+        }
+        else if (siswaId.HasValue)
+        {
+            query = query.Where(pb => pb.SiswaId == siswaId.Value);
+        }
+        else if (mahasiswaId.HasValue)
+        {
+            query = query.Where(pb => pb.MahasiswaId == mahasiswaId.Value);
+        }
+        else
+        {
+            return new List<PengajuanBeasiswaListDto>();
+        }
+
+        return await query
+            .OrderByDescending(pb => pb.PengajuanId)
+            .Select(pb => new PengajuanBeasiswaListDto
+            {
+                PengajuanId = pb.PengajuanId,
+                PeriodeId = pb.PeriodeId,
+                NamaPeriode = pb.Periode != null ? pb.Periode.NamaPeriode : string.Empty,
+                TipePenerima = pb.TipePenerima,
+                NamaPenerima = pb.TipePenerima == TipePenerima.Siswa && pb.Siswa != null
+                    ? pb.Siswa.NamaSiswa
+                    : (pb.Mahasiswa != null ? pb.Mahasiswa.NamaMahasiswa : "-"),
+                InstitusiPendidikan = pb.TipePenerima == TipePenerima.Siswa && pb.Siswa != null
+                    ? (pb.Siswa.RiwayatPendidikan.OrderByDescending(p => p.PendidikanId).Select(p => p.NamaSekolah).FirstOrDefault() ?? "-")
+                    : (pb.Mahasiswa != null ? (pb.Mahasiswa.RiwayatUniversitas.OrderByDescending(u => u.UnivId).Select(u => u.NamaUniversitas).FirstOrDefault() ?? "-") : "-"),
+                NilaiRataRata = pb.NilaiRataRata,
+                PaguBeasiswa = pb.PaguBeasiswa,
+                PaguTertanggung = pb.PaguTertanggung,
+                TelahDibayarLunas = pb.TelahDibayarLunas,
+                TanggalPengajuan = pb.TanggalPengajuan,
+                StatusPengajuan = pb.StatusPengajuan,
+                CurrentApprovalLevel = pb.DaftarApproval.Count(a => a.StatusApproval == StatusApproval.Approved)
+            })
+            .ToListAsync();
+    }
+
     public async Task<PengajuanBeasiswaDetailDto?> GetPengajuanByIdAsync(int id)
     {
         var pb = await _context.PengajuanBeasiswa
@@ -393,6 +454,26 @@ public class BeasiswaService : IBeasiswaService
             .Include(p => p.DicairkanOlehUser)
             .Where(p => p.PengajuanId == pengajuanId)
             .OrderBy(p => p.TerminKe)
+            .Select(p => new PencairanDto
+            {
+                PencairanId = p.PencairanId,
+                PengajuanId = p.PengajuanId,
+                TerminKe = p.TerminKe,
+                TanggalPembayaran = p.TanggalPembayaran,
+                Biaya = p.Biaya,
+                BuktiPembayaran = p.BuktiPembayaran,
+                NomorReferensiBank = p.NomorReferensiBank,
+                StatusPencairan = p.StatusPencairan,
+                DicairkanOleh = p.DicairkanOlehUser != null ? p.DicairkanOlehUser.Username : null
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<PencairanDto>> GetAllPencairanAsync()
+    {
+        return await _context.PencairanBeasiswa
+            .Include(p => p.DicairkanOlehUser)
+            .OrderByDescending(p => p.PencairanId)
             .Select(p => new PencairanDto
             {
                 PencairanId = p.PencairanId,

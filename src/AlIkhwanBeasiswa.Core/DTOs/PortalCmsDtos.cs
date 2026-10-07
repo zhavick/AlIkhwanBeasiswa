@@ -14,6 +14,7 @@ public class PengumumanDto
     public string Kategori { get; set; } = "Info Beasiswa";
     public bool IsPublished { get; set; }
     public DateTime TanggalTerbit { get; set; }
+    public DateTime TanggalDibuat => TanggalTerbit;
     public string PenulisName { get; set; } = string.Empty;
 }
 
@@ -44,9 +45,11 @@ public class BannerDto
     public string Judul { get; set; } = string.Empty;
     public string? Subjudul { get; set; }
     public string GambarUrl { get; set; } = string.Empty;
+    public string ImageUrl => GambarUrl;
     public string? LinkUrl { get; set; }
     public int Urutan { get; set; }
     public bool StatusAktif { get; set; }
+    public bool IsActive => StatusAktif;
 }
 
 public class CreateBannerDto
@@ -54,9 +57,11 @@ public class CreateBannerDto
     public string Judul { get; set; } = string.Empty;
     public string? Subjudul { get; set; }
     public string GambarUrl { get; set; } = string.Empty;
+    public string? ImageUrl { get => GambarUrl; set => GambarUrl = value ?? string.Empty; }
     public string? LinkUrl { get; set; }
     public int Urutan { get; set; } = 1;
     public bool StatusAktif { get; set; } = true;
+    public bool? IsActive { get => StatusAktif; set => StatusAktif = value ?? true; }
 }
 
 // --- SYARAT DOKUMEN ---
@@ -64,9 +69,12 @@ public class SyaratDokumenDto
 {
     public int SyaratId { get; set; }
     public string NamaDokumen { get; set; } = string.Empty;
+    public string NamaSyarat => NamaDokumen;
     public string? Deskripsi { get; set; }
     public bool Wajib { get; set; }
+    public bool IsWajib => Wajib;
     public string TipePenerima { get; set; } = "Semua";
+    public string BerlakuUntuk => TipePenerima;
     public string FormatFileDiizinkan { get; set; } = "pdf,jpg,png";
     public int MaxSizeMb { get; set; }
 }

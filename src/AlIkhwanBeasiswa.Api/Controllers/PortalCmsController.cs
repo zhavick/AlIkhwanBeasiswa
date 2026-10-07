@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AlIkhwanBeasiswa.Api.Controllers;
 
 [ApiController]
+[Route("api/portal-cms")]
 [Route("api/[controller]")]
 public class PortalCmsController : ControllerBase
 {
@@ -68,6 +69,12 @@ public class PortalCmsController : ControllerBase
     {
         var list = await _cmsService.GetBannerListAsync(!all);
         return Ok(list);
+    }
+
+    [HttpGet("banners")]
+    public async Task<IActionResult> GetBannersAlias([FromQuery] bool all = false)
+    {
+        return await GetBanner(all);
     }
 
     [HttpPost("banner")]
@@ -175,6 +182,13 @@ public class PortalCmsController : ControllerBase
         return Ok(list);
     }
 
+    [HttpGet("helpdesk/semua")]
+    [Authorize(Policy = "CanManagePortal")]
+    public async Task<IActionResult> GetAllHelpdeskAlias()
+    {
+        return await GetAllHelpdesk();
+    }
+
     [HttpGet("helpdesk/my")]
     [Authorize]
     public async Task<IActionResult> GetMyHelpdesk()
@@ -191,6 +205,13 @@ public class PortalCmsController : ControllerBase
         var userId = GetCurrentUserId();
         var tiket = await _cmsService.CreateTiketAsync(request, userId);
         return Ok(tiket);
+    }
+
+    [HttpPost("helpdesk/tiket")]
+    [Authorize]
+    public async Task<IActionResult> CreateHelpdeskAlias([FromBody] CreateHelpdeskTiketDto request)
+    {
+        return await CreateHelpdesk(request);
     }
 
     [HttpPost("helpdesk/{id}/jawab")]

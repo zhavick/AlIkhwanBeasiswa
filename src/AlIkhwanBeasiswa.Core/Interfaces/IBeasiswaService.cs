@@ -13,6 +13,8 @@ public interface IBeasiswaService
 
     // Pengajuan
     Task<List<PengajuanBeasiswaListDto>> GetAllPengajuanAsync(int? periodeId = null, StatusPengajuan? status = null);
+    Task<List<PengajuanBeasiswaListDto>> GetPengajuanByUserIdAsync(int userId);
+    Task<List<PengajuanBeasiswaListDto>> GetPengajuanByPenerimaAsync(int? siswaId, int? mahasiswaId);
     Task<PengajuanBeasiswaDetailDto?> GetPengajuanByIdAsync(int id);
     Task<PengajuanBeasiswaDetailDto> SubmitPengajuanAsync(SubmitPengajuanBeasiswaDto request);
 
@@ -22,4 +24,5 @@ public interface IBeasiswaService
     // Pencairan
     Task<PencairanDto> ProcessPencairanAsync(PencairanRequestDto request, int userId);
     Task<List<PencairanDto>> GetRiwayatPencairanAsync(int pengajuanId);
+    Task<List<PencairanDto>> GetAllPencairanAsync();
 }

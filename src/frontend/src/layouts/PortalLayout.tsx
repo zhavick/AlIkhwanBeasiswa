@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, NavLink, Outlet, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import LoginModal from '../components/auth/LoginModal';
 import {
   GraduationCap,
   FileText,
@@ -18,9 +19,21 @@ import {
 } from 'lucide-react';
 
 export const PortalLayout: React.FC = () => {
-  const { user, isAuthenticated, logout, hasRole } = useAuth();
+  const { user, isAuthenticated, logout, hasRole, openLoginModal } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('login') === 'true') {
+      const fromPath = (location.state as any)?.from?.pathname;
+      openLoginModal(fromPath);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('login');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, location.state, openLoginModal, setSearchParams]);
 
   const isStaff = hasRole('SuperAdmin') || hasRole('Pengurus') || hasRole('Verifikator') || hasRole('Koordinator');
 
@@ -113,13 +126,14 @@ export const PortalLayout: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <Link
-                  to="/login"
+                <button
+                  type="button"
+                  onClick={() => openLoginModal()}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-emerald-700 hover:bg-slate-100 transition-colors flex items-center space-x-1"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Masuk Akun</span>
-                </Link>
+                </button>
                 <Link
                   to="/register"
                   className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-xs shadow-emerald-600/30"
@@ -190,13 +204,16 @@ export const PortalLayout: React.FC = () => {
                 </>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    to="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-center py-2 px-4 border border-slate-300 rounded-lg text-sm font-medium text-slate-700"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      openLoginModal();
+                    }}
+                    className="flex items-center justify-center py-2 px-4 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
                   >
                     Masuk
-                  </Link>
+                  </button>
                   <Link
                     to="/register"
                     onClick={() => setMobileMenuOpen(false)}
@@ -267,6 +284,9 @@ export const PortalLayout: React.FC = () => {
           &copy; {new Date().getFullYear()} Sistem Informasi Manajemen Beasiswa & Portal Al-Ikhwan. Seluruh hak cipta dilindungi.
         </div>
       </footer>
+
+      {/* Login Modal Popup */}
+      <LoginModal />
     </div>
   );
 };

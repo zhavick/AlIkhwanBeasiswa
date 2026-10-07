@@ -10,12 +10,25 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Database Context (PostgreSQL via Npgsql)
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? "Host=localhost;Port=5432;Database=alikhwan_beasiswa;Username=postgres;Password=secret";
+// 1. Database Context (PostgreSQL with SQLite local dev fallback)
+var dbProvider = builder.Configuration["DatabaseProvider"] ?? "Sqlite";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+{
+    if (dbProvider.Equals("Postgres", StringComparison.OrdinalIgnoreCase) ||
+        (connectionString != null && connectionString.Contains("Username=", StringComparison.OrdinalIgnoreCase)))
+    {
+        options.UseNpgsql(connectionString ?? "Host=localhost;Port=5432;Database=alikhwan_beasiswa;Username=postgres;Password=secret");
+    }
+    else
+    {
+        var sqliteConn = connectionString != null && connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase)
+            ? connectionString
+            : "Data Source=alikhwan_beasiswa.db";
+        options.UseSqlite(sqliteConn);
+    }
+});
 
 // 2. Dependency Injection Services
 builder.Services.AddScoped<IAuthService, AuthService>();

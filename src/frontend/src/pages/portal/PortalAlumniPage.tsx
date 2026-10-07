@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -10,6 +10,7 @@ import {
   Users,
   Award,
   Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 
 export const PortalAlumniPage: React.FC = () => {
@@ -17,9 +18,10 @@ export const PortalAlumniPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'karir' | 'kontribusi'>('karir');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [kontribusiList, setKontribusiList] = useState<any[]>([]);
 
   const [karirData, setKarirData] = useState({
-    alumniId: 1,
+    mahasiswaId: user?.profileId || 0,
     instansiKerja: 'PT. Bank Syariah Indonesia Tbk',
     posisiJabatan: 'Product Specialist',
     bidangIndustri: 'Perbankan & Keuangan Syariah',
@@ -29,17 +31,50 @@ export const PortalAlumniPage: React.FC = () => {
   });
 
   const [kontribusiData, setKontribusiData] = useState({
-    alumniId: 1,
     jenisKontribusi: 'Mentor Adik Asuh & Donasi Rutin',
     nominalRupiah: 500000,
     keterangan: 'Bantuan uang saku bulanan untuk 1 orang adik asuh jenjang SMA.',
   });
 
+  useEffect(() => {
+    const fetchAlumniInfo = async () => {
+      try {
+        const [trRes, koRes] = await Promise.allSettled([
+          api.get('/alumni/my-tracer'),
+          api.get('/alumni/kontribusi'),
+        ]);
+
+        if (trRes.status === 'fulfilled' && trRes.value.data) {
+          const t = trRes.value.data;
+          setKarirData((prev) => ({
+            ...prev,
+            mahasiswaId: t.mahasiswaId || prev.mahasiswaId,
+            instansiKerja: t.namaPerusahaan || prev.instansiKerja,
+            posisiJabatan: t.jabatan || prev.posisiJabatan,
+            bidangIndustri: t.bidangPekerjaan || prev.bidangIndustri,
+            gajiKisaran: t.rentangGaji || prev.gajiKisaran,
+          }));
+        }
+
+        if (koRes.status === 'fulfilled') {
+          setKontribusiList(koRes.value.data);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchAlumniInfo();
+  }, [user]);
+
   const handleUpdateKarir = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post('/alumni/update-karir', karirData);
+      await api.post('/alumni/update-karir', {
+        ...karirData,
+        mahasiswaId: user?.profileId || karirData.mahasiswaId,
+      });
       setSuccessMsg('Data karir & pekerjaan Anda berhasil diperbarui di sistem tracer!');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
@@ -53,9 +88,18 @@ export const PortalAlumniPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post('/alumni/kontribusi', kontribusiData);
+      await api.post('/alumni/kontribusi', {
+        mahasiswaId: user?.profileId || 0,
+        tipeKontribusi: kontribusiData.jenisKontribusi,
+        deskripsiKontribusi: kontribusiData.keterangan,
+        nominalDonasi: kontribusiData.nominalRupiah,
+      });
       setSuccessMsg('Jazakumullah Khairan Katsiran! Komitmen kontribusi alumni Anda telah dicatat.');
       setTimeout(() => setSuccessMsg(null), 4000);
+
+      // Refresh list
+      const koRes = await api.get('/alumni/kontribusi');
+      setKontribusiList(koRes.data);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Gagal menyimpan komitmen kontribusi');
     } finally {
@@ -98,9 +142,8 @@ export const PortalAlumniPage: React.FC = () => {
           }`}
         >
           <Building className="w-4 h-4" />
-          <span>Pembaruan Data Pekerjaan Saat Ini</span>
+          <span>Tracer Jejak Karir</span>
         </button>
-
         <button
           onClick={() => setActiveTab('kontribusi')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
@@ -110,21 +153,30 @@ export const PortalAlumniPage: React.FC = () => {
           }`}
         >
           <HeartHandshake className="w-4 h-4" />
-          <span>Komitmen Donasi & Mentor Adik Asuh</span>
+          <span>Giving Back & Kontribusi</span>
         </button>
       </div>
 
-      {/* Tab Karir */}
+      {/* Tab 1: Form Tracer Karir */}
       {activeTab === 'karir' && (
-        <form onSubmit={handleUpdateKarir} className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4 text-xs">
-          <h2 className="font-bold text-slate-800 text-sm">Form Tracer Studi Tempat Bekerja</h2>
-          <p className="text-slate-500 text-xs">
-            Data ini membantu yayasan mengevaluasi dampak bantuan beasiswa terhadap serapan dunia kerja alumni.
-          </p>
+        <form onSubmit={handleUpdateKarir} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5 text-xs">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div>
+              <h2 className="font-bold text-sm text-slate-800">Pembaruan Riwayat Pekerjaan</h2>
+              <p className="text-[11px] text-slate-400">
+                Data ini membantu yayasan mengukur keselarasan studi dan daya serap lulusan penerima beasiswa.
+              </p>
+            </div>
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700">
+              Status: Bekerja
+            </span>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Nama Perusahaan / Lembaga *</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Nama Perusahaan / Tempat Bekerja *
+              </label>
               <input
                 type="text"
                 required
@@ -135,7 +187,9 @@ export const PortalAlumniPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Posisi / Jabatan Pekerjaan *</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Posisi / Jabatan Pekerjaan *
+              </label>
               <input
                 type="text"
                 required
@@ -146,54 +200,40 @@ export const PortalAlumniPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Bidang / Sektor Industri *</label>
-              <select
+              <label className="block font-semibold text-slate-700 mb-1">
+                Sektor / Bidang Industri *
+              </label>
+              <input
+                type="text"
+                required
                 value={karirData.bidangIndustri}
                 onChange={(e) => setKarirData({ ...karirData, bidangIndustri: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg"
-              >
-                <option value="Teknologi Informasi & Digital">Teknologi Informasi & Digital</option>
-                <option value="Perbankan & Keuangan Syariah">Perbankan & Keuangan Syariah</option>
-                <option value="Pendidikan & Riset">Pendidikan & Riset</option>
-                <option value="Kesehatan & Farmasi">Kesehatan & Farmasi</option>
-                <option value="Pemerintahan / BUMN">Pemerintahan / BUMN</option>
-                <option value="Wirausaha / Bisnis Mandiri">Wirausaha / Bisnis Mandiri</option>
-              </select>
+              />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Masa Tunggu Setelah Wisuda</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={karirData.lamaTungguBulan}
-                  onChange={(e) => setKarirData({ ...karirData, lamaTungguBulan: parseInt(e.target.value) })}
-                  className="w-24 px-3 py-2 border rounded-lg font-bold"
-                />
-                <span className="text-slate-500">Bulan hingga diterima kerja</span>
-              </div>
-            </div>
-
-            <div className="col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1">Rentang Penghasilan / Gaji</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Rentang Gaji / Pendapatan Bulanan
+              </label>
               <select
                 value={karirData.gajiKisaran}
                 onChange={(e) => setKarirData({ ...karirData, gajiKisaran: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg bg-white"
               >
-                <option value="Di bawah Rp 4.000.000">Di bawah Rp 4.000.000</option>
-                <option value="Rp 4.000.000 - Rp 8.000.000">Rp 4.000.000 - Rp 8.000.000</option>
-                <option value="Rp 8.000.000 - Rp 15.000.000">Rp 8.000.000 - Rp 15.000.000</option>
-                <option value="Di atas Rp 15.000.000">Di atas Rp 15.000.000</option>
+                <option value="Rp 4.000.000 - Rp 7.000.000">Rp 4.000.000 - Rp 7.000.000</option>
+                <option value="Rp 8.000.000 - Rp 12.000.000">Rp 8.000.000 - Rp 12.000.000</option>
+                <option value="Rp 13.000.000 - Rp 20.000.000">Rp 13.000.000 - Rp 20.000.000</option>
+                <option value="> Rp 20.000.000">&gt; Rp 20.000.000</option>
               </select>
             </div>
           </div>
 
-          <div className="pt-3 border-t flex justify-end">
+          <div className="pt-4 border-t flex items-center justify-end">
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-lg transition"
+              className="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl transition shadow-sm disabled:opacity-50"
             >
               {loading ? 'Menyimpan...' : 'Perbarui Data Karir'}
             </button>
@@ -201,64 +241,100 @@ export const PortalAlumniPage: React.FC = () => {
         </form>
       )}
 
-      {/* Tab Kontribusi */}
+      {/* Tab 2: Komitmen Kontribusi */}
       {activeTab === 'kontribusi' && (
-        <form onSubmit={handleSimpanKontribusi} className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4 text-xs">
-          <div className="flex items-center gap-2 text-rose-600 font-bold">
-            <HeartHandshake className="w-5 h-5" />
-            <h2 className="text-slate-800 text-sm">Program Alumni Peduli: Menjadi Donatur & Kakak Asuh</h2>
-          </div>
-          <p className="text-slate-500 text-xs">
-            Alumni yang telah mandiri berkesempatan melanjutkan mata rantai kebaikan dengan menjadi mentor atau donatur bagi adik-adik penerima beasiswa baru.
-          </p>
+        <div className="space-y-6">
+          <form onSubmit={handleSimpanKontribusi} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5 text-xs">
+            <div className="border-b pb-3">
+              <h2 className="font-bold text-sm text-slate-800">Program Berbagi & Mentoring Adik Asuh</h2>
+              <p className="text-[11px] text-slate-400">
+                Peluang memberikan dampak nyata bagi generasi penerus beasiswa Al-Ikhwan.
+              </p>
+            </div>
 
-          <div className="space-y-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Bentuk Partisipasi Kontribusi *</label>
-              <select
-                value={kontribusiData.jenisKontribusi}
-                onChange={(e) => setKontribusiData({ ...kontribusiData, jenisKontribusi: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Bentuk Kontribusi yang Dipilih *
+                </label>
+                <select
+                  value={kontribusiData.jenisKontribusi}
+                  onChange={(e) => setKontribusiData({ ...kontribusiData, jenisKontribusi: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg bg-white"
+                >
+                  <option value="Mentor Adik Asuh & Donasi Rutin">Mentor Adik Asuh & Donasi Rutin</option>
+                  <option value="Mentor Karir / Pemateri Kajian">Mentor Karir / Pemateri Kajian</option>
+                  <option value="Donasi Beasiswa Bulanan">Donasi Beasiswa Bulanan</option>
+                  <option value="Penyedia Peluang Magang/Kerja">Penyedia Peluang Magang/Kerja</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Komitmen Nominal Donasi (Rp / Bulan)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={50000}
+                  value={kontribusiData.nominalRupiah}
+                  onChange={(e) => setKontribusiData({ ...kontribusiData, nominalRupiah: parseFloat(e.target.value) })}
+                  className="w-full px-3 py-2 border rounded-lg font-bold"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Deskripsi Kesiapan / Bidang Pendampingan
+                </label>
+                <textarea
+                  rows={2}
+                  value={kontribusiData.keterangan}
+                  onChange={(e) => setKontribusiData({ ...kontribusiData, keterangan: e.target.value })}
+                  placeholder="Keahlian yang dapat dibagikan kepada adik asuh..."
+                  className="w-full p-3 border rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t flex items-center justify-end">
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl transition shadow-sm disabled:opacity-50"
               >
-                <option value="Mentor Karir & Kakak Asuh">Mentor Karir & Kakak Asuh (Berbagi Pengalaman)</option>
-                <option value="Donasi Rutin Beasiswa">Donasi Rutin Bulanan</option>
-                <option value="Pemateri Kajian / Workshop">Pemateri Kajian / Workshop Softskill</option>
-                <option value="Penyedia Informasi Lowongan Magang/Kerja">Penyedia Info Magang & Karir</option>
-              </select>
+                {loading ? 'Menyimpan...' : 'Simpan Komitmen Kontribusi'}
+              </button>
             </div>
+          </form>
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Nominal Donasi Rutin (Opsional)</label>
-              <input
-                type="number"
-                value={kontribusiData.nominalRupiah}
-                onChange={(e) => setKontribusiData({ ...kontribusiData, nominalRupiah: parseFloat(e.target.value) })}
-                className="w-full px-3 py-2 border rounded-lg font-bold text-emerald-700"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Pesan & Harapan untuk Adik Asuh</label>
-              <textarea
-                rows={3}
-                value={kontribusiData.keterangan}
-                onChange={(e) => setKontribusiData({ ...kontribusiData, keterangan: e.target.value })}
-                placeholder="Semangat menuntut ilmu, semoga kelak bisa bermanfaat luas untuk ummat..."
-                className="w-full p-2.5 border rounded-lg"
-              />
-            </div>
+          {/* List Kontribusi Terdaftar */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs text-xs space-y-3">
+            <h3 className="font-bold text-slate-800">Daftar Komitmen Kontribusi Alumni Terdaftar</h3>
+            {kontribusiList.length === 0 ? (
+              <p className="text-slate-400 text-xs py-4 text-center">Belum ada catatan kontribusi alumni.</p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {kontribusiList.map((k) => (
+                  <div key={k.kontribusiId} className="py-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-slate-800 block">{k.namaAlumni}</span>
+                      <span className="text-[11px] text-purple-700 font-semibold">{k.tipeKontribusi}</span>
+                      {k.deskripsiKontribusi && (
+                        <p className="text-[11px] text-slate-500 mt-0.5">{k.deskripsiKontribusi}</p>
+                      )}
+                    </div>
+                    {k.nominalDonasi > 0 && (
+                      <span className="font-bold text-emerald-700 text-xs">
+                        Rp {k.nominalDonasi?.toLocaleString('id-ID')} / bln
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-
-          <div className="pt-3 border-t flex justify-end">
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition"
-            >
-              {loading ? 'Menyimpan...' : 'Kirim Komitmen Kontribusi'}
-            </button>
-          </div>
-        </form>
+        </div>
       )}
     </div>
   );

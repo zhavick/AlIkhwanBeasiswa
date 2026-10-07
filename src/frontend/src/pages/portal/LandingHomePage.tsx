@@ -19,19 +19,22 @@ export const LandingHomePage: React.FC = () => {
   const [banners, setBanners] = useState<any[]>([]);
   const [pengumuman, setPengumuman] = useState<any[]>([]);
   const [syaratList, setSyaratList] = useState<any[]>([]);
+  const [periodeAktif, setPeriodeAktif] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchPublicData = async () => {
       try {
-        const [bRes, pRes, sRes] = await Promise.allSettled([
-          api.get('/portal-cms/banners'),
+        const [bRes, pRes, sRes, perRes] = await Promise.allSettled([
+          api.get('/portal-cms/banner'),
           api.get('/portal-cms/pengumuman'),
           api.get('/portal-cms/syarat-dokumen'),
+          api.get('/beasiswa/periode/aktif'),
         ]);
 
         if (bRes.status === 'fulfilled') setBanners(bRes.value.data);
         if (pRes.status === 'fulfilled') setPengumuman(pRes.value.data);
         if (sRes.status === 'fulfilled') setSyaratList(sRes.value.data);
+        if (perRes.status === 'fulfilled') setPeriodeAktif(perRes.value.data);
       } catch (err) {
         console.error(err);
       }
@@ -53,7 +56,11 @@ export const LandingHomePage: React.FC = () => {
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Penerimaan Beasiswa Al-Ikhwan TA 2026/2027</span>
+                <span>
+                  {periodeAktif
+                    ? `Pendaftaran Terbuka: ${periodeAktif.namaPeriode} (S/d ${new Date(periodeAktif.tanggalSelesaiDaftar).toLocaleDateString('id-ID')})`
+                    : 'Penerimaan Beasiswa Al-Ikhwan TA 2026/2027'}
+                </span>
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
@@ -112,6 +119,7 @@ export const LandingHomePage: React.FC = () => {
                 <div className="aspect-video rounded-2xl overflow-hidden mb-4 bg-slate-800">
                   <img
                     src={
+                      banners[0]?.gambarUrl ||
                       banners[0]?.imageUrl ||
                       'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80'
                     }
@@ -128,7 +136,8 @@ export const LandingHomePage: React.FC = () => {
                     {banners[0]?.judul || 'Beasiswa Pendidikan & Pembinaan Karakter'}
                   </h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    {banners[0]?.subJudul ||
+                    {banners[0]?.subjudul ||
+                      banners[0]?.subJudul ||
                       'Bantuan biaya SPP/UKT, uang saku bulanan, kajian pekanan, serta pendampingan tugas akhir bagi mahasiswa.'}
                   </p>
                 </div>
@@ -216,7 +225,7 @@ export const LandingHomePage: React.FC = () => {
                     {item.kategori}
                   </span>
                   <span className="text-[10px] text-slate-400">
-                    {new Date(item.tanggalDibuat).toLocaleDateString('id-ID')}
+                    {new Date(item.tanggalTerbit || item.tanggalDibuat || Date.now()).toLocaleDateString('id-ID')}
                   </span>
                 </div>
                 <h4 className="font-bold text-sm text-slate-900 mb-2">{item.judul}</h4>

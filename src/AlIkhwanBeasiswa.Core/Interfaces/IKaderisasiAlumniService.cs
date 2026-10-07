@@ -7,6 +7,7 @@ public interface IKaderisasiAlumniService
     // Kaderisasi
     Task<List<KaderisasiProfilDto>> GetKaderListAsync();
     Task<KaderisasiProfilDto?> GetKaderByMahasiswaIdAsync(int mahasiswaId);
+    Task<KaderisasiProfilDto?> GetKaderByUserIdAsync(int userId);
     Task<bool> UpdateKaderProfilAsync(int mahasiswaId, UpdateKaderisasiProfilDto request);
 
     Task<List<KaderisasiKegiatanDto>> GetAllKegiatanAsync();
@@ -17,6 +18,7 @@ public interface IKaderisasiAlumniService
     // Alumni Tracer
     Task<List<AlumniTracerDto>> GetTracerListAsync();
     Task<AlumniTracerDto?> GetTracerByMahasiswaIdAsync(int mahasiswaId);
+    Task<AlumniTracerDto?> GetTracerByUserIdAsync(int userId);
     Task<bool> UpdateTracerAsync(int mahasiswaId, UpdateAlumniTracerDto request);
     Task<AlumniStatistikDto> GetStatistikAlumniAsync();
 

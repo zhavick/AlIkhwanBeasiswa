@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AlIkhwanBeasiswa.Core.DTOs;
 using AlIkhwanBeasiswa.Core.Enums;
 using AlIkhwanBeasiswa.Core.Interfaces;
@@ -33,6 +34,14 @@ public class BeasiswaController : ControllerBase
         return Ok(aktif);
     }
 
+    [HttpGet("periode-aktif")]
+    public async Task<IActionResult> GetPeriodeAktifList()
+    {
+        var aktif = await _beasiswaService.GetPeriodeAktifAsync();
+        if (aktif == null) return Ok(new List<PeriodeBeasiswaDto>());
+        return Ok(new List<PeriodeBeasiswaDto> { aktif });
+    }
+
     [HttpPost("periode")]
     [Authorize(Policy = "CanManagePortal")]
     public async Task<IActionResult> CreatePeriode([FromBody] CreatePeriodeDto request)
@@ -59,6 +68,28 @@ public class BeasiswaController : ControllerBase
         return Ok(list);
     }
 
+    [HttpGet("my-pengajuan")]
+    [Authorize]
+    public async Task<IActionResult> GetMyPengajuan()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var list = await _beasiswaService.GetPengajuanByUserIdAsync(userId);
+        return Ok(list);
+    }
+
+    [HttpGet("penerima/{penerimaId}")]
+    [Authorize]
+    public async Task<IActionResult> GetPengajuanByPenerimaId(int penerimaId)
+    {
+        var list = await _beasiswaService.GetPengajuanByPenerimaAsync(penerimaId, penerimaId);
+        return Ok(list);
+    }
+
     [HttpGet("pengajuan/{id}")]
     [Authorize]
     public async Task<IActionResult> GetPengajuanById(int id)
@@ -81,5 +112,12 @@ public class BeasiswaController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    [HttpPost("ajukan")]
+    [Authorize]
+    public async Task<IActionResult> AjukanAlias([FromBody] SubmitPengajuanBeasiswaDto request)
+    {
+        return await SubmitPengajuan(request);
     }
 }

@@ -18,6 +18,13 @@ public class PencairanController : ControllerBase
         _beasiswaService = beasiswaService;
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetAllPencairan()
+    {
+        var list = await _beasiswaService.GetAllPencairanAsync();
+        return Ok(list);
+    }
+
     [HttpPost]
     [Authorize(Policy = "CanDisburse")]
     public async Task<IActionResult> ProcessPencairan([FromBody] PencairanRequestDto request)
@@ -44,5 +51,12 @@ public class PencairanController : ControllerBase
     {
         var list = await _beasiswaService.GetRiwayatPencairanAsync(pengajuanId);
         return Ok(list);
+    }
+
+    [HttpPost("proses")]
+    [Authorize(Policy = "CanDisburse")]
+    public async Task<IActionResult> ProcessPencairanAlias([FromBody] PencairanRequestDto request)
+    {
+        return await ProcessPencairan(request);
     }
 }

@@ -9,6 +9,7 @@ import {
   UserCheck,
   CheckCircle,
   ExternalLink,
+  Download,
 } from 'lucide-react';
 
 export const PenerimaPage: React.FC = () => {
@@ -79,6 +80,53 @@ export const PenerimaPage: React.FC = () => {
     return nama.includes(q) || inst.includes(q);
   });
 
+  const handleExportCSV = () => {
+    if (tab === 'siswa') {
+      if (siswaList.length === 0) return;
+      const headers = ['Nama Siswa', 'NISN', 'Tingkat', 'Sekolah', 'Kelas', 'Nilai Rata-rata', 'No Telp', 'Status'];
+      const rows = siswaList.map((s) => [
+        `"${s.namaSiswa || '-'}"`,
+        `"${s.nisn || '-'}"`,
+        `"${s.tingkatSekolah || '-'}"`,
+        `"${s.namaSekolah || '-'}"`,
+        `"${s.kelas || '-'}"`,
+        s.nilaiRataRataRapor || 0,
+        `"${s.noTelp || '-'}"`,
+        s.statusAktif ? 'Aktif' : 'Non-Aktif',
+      ]);
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `rekap_siswa_alikhwan_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      if (mahasiswaList.length === 0) return;
+      const headers = ['Nama Mahasiswa', 'NIM', 'Universitas', 'Fakultas', 'Jurusan', 'Semester', 'IPK Terakhir', 'Status Akademik', 'No Telp'];
+      const rows = mahasiswaList.map((m) => [
+        `"${m.namaMahasiswa || '-'}"`,
+        `"${m.nim || '-'}"`,
+        `"${m.namaUniversitas || '-'}"`,
+        `"${m.fakultas || '-'}"`,
+        `"${m.jurusan || '-'}"`,
+        m.semester || 1,
+        m.ipkTerakhir || 0,
+        m.statusAkademik === 3 ? 'Lulus (Alumni)' : m.statusAkademik === 2 ? 'Cuti' : 'Aktif',
+        `"${m.noTelp || '-'}"`,
+      ]);
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `rekap_mahasiswa_alikhwan_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -89,6 +137,13 @@ export const PenerimaPage: React.FC = () => {
             Data terpadu profil siswa dan mahasiswa, riwayat akademik, dan transisi kelulusan.
           </p>
         </div>
+        <button
+          onClick={handleExportCSV}
+          className="px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-xs transition flex items-center gap-1.5 self-start"
+        >
+          <Download className="w-4 h-4 text-slate-500" />
+          <span>Export CSV {tab === 'siswa' ? 'Siswa' : 'Mahasiswa'}</span>
+        </button>
       </div>
 
       {successMsg && (

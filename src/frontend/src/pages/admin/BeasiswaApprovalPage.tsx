@@ -11,15 +11,25 @@ import {
   FileText,
   User,
   ShieldAlert,
+  ExternalLink,
+  Filter,
+  DollarSign,
+  Download,
 } from 'lucide-react';
 
 export const BeasiswaApprovalPage: React.FC = () => {
   const { user, hasRole } = useAuth();
   const [queue, setQueue] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stageFilter, setStageFilter] = useState<'ALL' | 1 | 2 | 3>('ALL');
+
   const [selectedApp, setSelectedApp] = useState<any | null>(null);
   const [decision, setDecision] = useState<'Approve' | 'Reject' | 'RequestRevision'>('Approve');
   const [catatan, setCatatan] = useState('');
+  const [nominalDisetujui, setNominalDisetujui] = useState<number>(0);
+  const [appDocs, setAppDocs] = useState<any[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -39,6 +49,22 @@ export const BeasiswaApprovalPage: React.FC = () => {
     fetchQueue();
   }, []);
 
+  const handleSelectApp = async (app: any) => {
+    setSelectedApp(app);
+    setNominalDisetujui(app.nominalTertanggung || app.nominalDiajukan || 0);
+    setCatatan('');
+    setDecision('Approve');
+    setLoadingDocs(true);
+    try {
+      const res = await api.get(`/portal-cms/pengajuan/${app.pengajuanId}/dokumen`);
+      setAppDocs(res.data);
+    } catch {
+      setAppDocs([]);
+    } finally {
+      setLoadingDocs(false);
+    }
+  };
+
   const handleProcess = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedApp) return;
@@ -50,10 +76,12 @@ export const BeasiswaApprovalPage: React.FC = () => {
         pengajuanId: selectedApp.pengajuanId,
         decision,
         catatan,
+        paguTertanggungDisetujui: decision === 'Approve' ? nominalDisetujui : null,
+        tahap: selectedApp.currentApprovalStage,
       });
 
       setMsg({
-        text: `Keputusan [${decision}] untuk pengajuan ${selectedApp.nomorPengajuan} berhasil disimpan.`,
+        text: `Keputusan [${decision}] untuk permohonan ${selectedApp.nomorPengajuan} berhasil disimpan.`,
         type: 'success',
       });
       setSelectedApp(null);
@@ -69,6 +97,37 @@ export const BeasiswaApprovalPage: React.FC = () => {
     }
   };
 
+  const filteredQueue = queue.filter((item) => {
+    if (stageFilter === 'ALL') return true;
+    return item.currentApprovalStage === stageFilter;
+  });
+
+  const handleExportCSV = () => {
+    if (queue.length === 0) return;
+
+    const headers = ['Nomor Pengajuan', 'Nama Pemohon', 'Tipe Penerima', 'Asal Sekolah/Kampus', 'Nilai Rata-rata/IPK', 'Pagu Diajukan', 'Pagu Tertanggung', 'Tahap Approval', 'Status'];
+    const rows = queue.map((app) => [
+      `"${app.nomorPengajuan || '-'}"`,
+      `"${app.namaPenerima || '-'}"`,
+      `"${app.tipePenerima || '-'}"`,
+      `"${app.institusiAsal || '-'}"`,
+      app.nilaiRataRata || 0,
+      app.nominalDiajukan || 0,
+      app.nominalTertanggung || 0,
+      `"Tahap ${app.currentApprovalStage}"`,
+      `"${app.statusPengajuan || '-'}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `antrean_approval_beasiswa_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -78,8 +137,60 @@ export const BeasiswaApprovalPage: React.FC = () => {
             Verifikasi & Approval Beasiswa
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Alur persetujuan berjenjang: Tahap 1 Verifikator Berkas $\rightarrow$ Tahap 2 Koordinator $\rightarrow$ Tahap 3 Pimpinan Yayasan.
+            Alur persetujuan berjenjang: Tahap 1 Verifikator Berkas &rarr; Tahap 2 Koordinator Beasiswa &rarr; Tahap 3 Pimpinan Yayasan.
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-xs transition flex items-center gap-1.5"
+            title="Download Rekap CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>Export CSV</span>
+          </button>
+          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-xs">
+            <button
+              onClick={() => setStageFilter('ALL')}
+              className={`px-2.5 py-1 rounded-md font-bold transition ${
+                stageFilter === 'ALL'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Semua ({queue.length})
+            </button>
+            <button
+              onClick={() => setStageFilter(1)}
+              className={`px-2.5 py-1 rounded-md font-bold transition ${
+                stageFilter === 1
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-slate-600 hover:text-emerald-700'
+              }`}
+            >
+              Tahap 1
+            </button>
+            <button
+              onClick={() => setStageFilter(2)}
+              className={`px-2.5 py-1 rounded-md font-bold transition ${
+                stageFilter === 2
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-600 hover:text-blue-700'
+              }`}
+            >
+              Tahap 2
+            </button>
+            <button
+              onClick={() => setStageFilter(3)}
+              className={`px-2.5 py-1 rounded-md font-bold transition ${
+                stageFilter === 3
+                  ? 'bg-purple-600 text-white'
+                  : 'text-slate-600 hover:text-purple-700'
+              }`}
+            >
+              Tahap 3
+            </button>
+          </div>
         </div>
       </div>
 
@@ -104,7 +215,7 @@ export const BeasiswaApprovalPage: React.FC = () => {
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Antrean Menunggu Persetujuan ({queue.length})
+            Antrean Menunggu Persetujuan ({filteredQueue.length})
           </h2>
           <button
             onClick={fetchQueue}
@@ -132,18 +243,18 @@ export const BeasiswaApprovalPage: React.FC = () => {
                     Memuat antrean persetujuan...
                   </td>
                 </tr>
-              ) : queue.length === 0 ? (
+              ) : filteredQueue.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400">
                     <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2 opacity-80" />
                     <p className="font-semibold text-slate-600">Semua Antrean Bersih!</p>
                     <p className="text-[11px] text-slate-400">
-                      Tidak ada permohonan beasiswa yang menunggu persetujuan pada akun Anda.
+                      Tidak ada permohonan beasiswa yang menunggu persetujuan pada filter ini.
                     </p>
                   </td>
                 </tr>
               ) : (
-                queue.map((item) => (
+                filteredQueue.map((item) => (
                   <tr key={item.pengajuanId} className="hover:bg-slate-50/70 transition">
                     <td className="py-3 px-4">
                       <div className="font-bold text-slate-900">{item.nomorPengajuan}</div>
@@ -157,8 +268,16 @@ export const BeasiswaApprovalPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                        <Clock className="w-3 h-3 text-amber-600" />
+                      <div
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                          item.currentApprovalStage === 1
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : item.currentApprovalStage === 2
+                            ? 'bg-blue-50 text-blue-800 border-blue-200'
+                            : 'bg-purple-50 text-purple-800 border-purple-200'
+                        }`}
+                      >
+                        <Clock className="w-3 h-3" />
                         <span>Tahap {item.currentApprovalStage}: {item.nextApproverRole}</span>
                       </div>
                     </td>
@@ -167,7 +286,7 @@ export const BeasiswaApprovalPage: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <button
-                        onClick={() => setSelectedApp(item)}
+                        onClick={() => handleSelectApp(item)}
                         className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] transition shadow-xs inline-flex items-center gap-1.5"
                       >
                         <FileCheck2 className="w-3.5 h-3.5" />
@@ -219,18 +338,70 @@ export const BeasiswaApprovalPage: React.FC = () => {
               </div>
 
               {/* Approval Stage Indicator */}
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900">
+              <div
+                className={`p-3 rounded-xl border ${
+                  selectedApp.currentApprovalStage === 1
+                    ? 'bg-amber-50 border-amber-200 text-amber-900'
+                    : selectedApp.currentApprovalStage === 2
+                    ? 'bg-blue-50 border-blue-200 text-blue-900'
+                    : 'bg-purple-50 border-purple-200 text-purple-900'
+                }`}
+              >
                 <span className="font-bold block mb-1">
                   Persetujuan Tahap {selectedApp.currentApprovalStage} ({selectedApp.nextApproverRole}):
                 </span>
-                <p className="text-[11px] text-amber-800">
+                <p className="text-[11px]">
                   {selectedApp.currentApprovalStage === 1 &&
-                    'Pemeriksaan validitas administratif dan kelengkapan dokumen siswa/mahasiswa.'}
+                    'Pemeriksaan validitas administratif, kelengkapan berkas KTP, KK, dan keabsahan status siswa/mahasiswa.'}
                   {selectedApp.currentApprovalStage === 2 &&
-                    'Evaluasi nilai rapor/IPK, latar belakang keluarga, dan kelayakan menerima beasiswa.'}
+                    'Evaluasi nilai rapor/IPK, latar belakang sosial-ekonomi, dan kelayakan menerima beasiswa.'}
                   {selectedApp.currentApprovalStage === 3 &&
-                    'Pengesahan akhir oleh Pimpinan Yayasan untuk pencairan dana beasiswa.'}
+                    'Pengesahan akhir oleh Pimpinan Yayasan serta penentuan pagu tertanggung untuk pencairan dana beasiswa.'}
                 </p>
+              </div>
+
+              {/* Attached Documents */}
+              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-slate-500" />
+                    Berkas Persyaratan yang Diunggah Pemohon
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold">
+                    {appDocs.length} Dokumen
+                  </span>
+                </div>
+
+                {loadingDocs ? (
+                  <div className="py-3 text-center text-slate-400 text-[11px]">Memuat berkas pendaftar...</div>
+                ) : appDocs.length === 0 ? (
+                  <div className="py-2 text-slate-400 text-[11px] italic">
+                    Belum ada berkas terlampir pada pengajuan ini.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                    {appDocs.map((doc: any) => (
+                      <div
+                        key={doc.dokumenId}
+                        className="bg-white p-2 rounded-lg border border-slate-200 flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-800 text-[11px] truncate">{doc.namaSyarat}</p>
+                          <p className="text-[10px] text-slate-400 truncate">{doc.namaFileAsli || 'Dokumen Terlampir'}</p>
+                        </div>
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold shrink-0 flex items-center gap-1 transition"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>Buka</span>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Form Input Decision */}
@@ -279,6 +450,25 @@ export const BeasiswaApprovalPage: React.FC = () => {
                   </div>
                 </div>
 
+                {decision === 'Approve' && (
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Nominal Pagu Disetujui (Rp):
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      value={nominalDisetujui}
+                      onChange={(e) => setNominalDisetujui(parseFloat(e.target.value) || 0)}
+                      className="w-full p-2 border rounded-lg text-xs font-bold text-emerald-700 focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      Dapat disesuaikan jika yayasan memberikan persetujuan sebagian atau penuh.
+                    </span>
+                  </div>
+                )}
+
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
                     Catatan Evaluasi / Alasan Keputusan:
@@ -288,7 +478,7 @@ export const BeasiswaApprovalPage: React.FC = () => {
                     required
                     value={catatan}
                     onChange={(e) => setCatatan(e.target.value)}
-                    placeholder="Contoh: Berkas telah lengkap dan nilai memenuhi syarat minimum yayasan..."
+                    placeholder="Contoh: Berkas telah lengkap dan nilai rapor/IPK memenuhi kualifikasi beasiswa..."
                     className="w-full p-2.5 border rounded-lg text-xs focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>

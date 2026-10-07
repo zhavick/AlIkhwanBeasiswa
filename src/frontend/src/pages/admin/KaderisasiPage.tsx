@@ -9,6 +9,8 @@ import {
   Users,
   CheckCircle2,
   Award,
+  Search,
+  UserCheck,
 } from 'lucide-react';
 
 export const KaderisasiPage: React.FC = () => {
@@ -17,6 +19,7 @@ export const KaderisasiPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     namaKegiatan: '',
@@ -24,7 +27,7 @@ export const KaderisasiPage: React.FC = () => {
     deskripsi: '',
     tanggal: new Date().toISOString().split('T')[0],
     lokasi: 'Masjid Al-Ikhwan / Zoom Meeting',
-    pemateri: 'Ustadz DR. H. Fulan, Lc., MA',
+    pemateri: 'Ustadz Pembina Yayasan Al-Ikhwan',
     poinKehadiran: 10,
     wajibSemua: true,
   });
@@ -51,9 +54,15 @@ export const KaderisasiPage: React.FC = () => {
     setError(null);
     try {
       await api.post('/kaderisasi/agenda', {
-        ...formData,
-        tanggal: new Date(formData.tanggal).toISOString(),
+        namaKegiatan: formData.namaKegiatan,
+        deskripsi: formData.deskripsi,
+        tanggalKegiatan: new Date(formData.tanggal).toISOString(),
+        tempat: formData.lokasi,
+        tipeKegiatan: formData.jenisAgenda,
+        wajibHadir: formData.wajibSemua,
       });
+
+      setSuccess('Agenda kaderisasi baru berhasil dijadwalkan!');
       setShowModal(false);
       setFormData({
         namaKegiatan: '',
@@ -61,11 +70,12 @@ export const KaderisasiPage: React.FC = () => {
         deskripsi: '',
         tanggal: new Date().toISOString().split('T')[0],
         lokasi: 'Masjid Al-Ikhwan / Zoom Meeting',
-        pemateri: 'Ustadz DR. H. Fulan, Lc., MA',
+        pemateri: 'Ustadz Pembina Yayasan Al-Ikhwan',
         poinKehadiran: 10,
         wajibSemua: true,
       });
       fetchAgendas();
+      setTimeout(() => setSuccess(null), 4000);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Gagal membuat agenda kaderisasi');
     } finally {
@@ -92,6 +102,13 @@ export const KaderisasiPage: React.FC = () => {
         </button>
       </div>
 
+      {success && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
+
       {/* Grid List Agenda */}
       {loading ? (
         <div className="py-12 text-center text-slate-400 text-xs">Memuat jadwal agenda pembinaan...</div>
@@ -105,49 +122,64 @@ export const KaderisasiPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {agendas.map((item) => (
-            <div
-              key={item.agendaId}
-              className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition p-5 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    {item.jenisAgenda}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-                    <Award className="w-3 h-3 text-amber-500" />
-                    +{item.poinKehadiran} Poin
-                  </span>
+          {agendas.map((item) => {
+            const id = item.kegiatanId || item.agendaId;
+            const tanggal = item.tanggalKegiatan || item.tanggal;
+            const tempat = item.tempat || item.lokasi || 'Online via Zoom';
+            const tipe = item.tipeKegiatan || item.jenisAgenda || 'Kajian Rutin';
+            const wajib = item.wajibHadir !== undefined ? item.wajibHadir : true;
+            const peserta = item.totalPesertaHadir || 0;
+
+            return (
+              <div
+                key={id}
+                className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition p-5 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {tipe}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1">
+                      <Users className="w-3 h-3 text-slate-400" />
+                      {peserta} Hadir
+                    </span>
+                  </div>
+
+                  <h3 className="font-bold text-sm text-slate-900 mb-2">{item.namaKegiatan}</h3>
+                  <p className="text-xs text-slate-500 line-clamp-2 mb-4">
+                    {item.deskripsi || 'Kegiatan pembinaan rutin untuk seluruh kader penerima beasiswa Al-Ikhwan.'}
+                  </p>
+
+                  <div className="space-y-1.5 text-xs text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{new Date(tanggal).toLocaleDateString('id-ID', { dateStyle: 'full' })}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{tempat}</span>
+                    </div>
+                    {item.pemateri && (
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">Pemateri: {item.pemateri}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <h3 className="font-bold text-sm text-slate-900 mb-2">{item.namaKegiatan}</h3>
-                <p className="text-xs text-slate-500 line-clamp-2 mb-4">{item.deskripsi}</p>
-
-                <div className="space-y-1.5 text-xs text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>{new Date(item.tanggal).toLocaleDateString('id-ID', { dateStyle: 'full' })}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate">{item.lokasi || 'Online via Zoom'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate">Pemateri: {item.pemateri || 'Ustadz Pembina'}</span>
-                  </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">
+                    Sifat: <strong className={wajib ? 'text-emerald-700' : 'text-slate-600'}>{wajib ? 'Wajib Hadir' : 'Opsional'}</strong>
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    Terbuka Presensi
+                  </span>
                 </div>
               </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] text-slate-500">
-                  Status: <strong className="text-emerald-700">Terbuka Presensi</strong>
-                </span>
-                <span className="text-xs text-emerald-600 font-bold">Wajib Hadir</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -194,6 +226,7 @@ export const KaderisasiPage: React.FC = () => {
                     <option value="Pelatihan Softskill">Pelatihan Softskill</option>
                     <option value="Bakti Sosial">Bakti Sosial</option>
                     <option value="Leadership Camp">Leadership Camp</option>
+                    <option value="Mentoring Halaqah">Mentoring Halaqah</option>
                   </select>
                 </div>
                 <div>
@@ -206,43 +239,41 @@ export const KaderisasiPage: React.FC = () => {
                     className="w-full px-3 py-1.5 border rounded-lg"
                   />
                 </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Lokasi / Tempat</label>
-                  <input
-                    type="text"
-                    value={formData.lokasi}
-                    onChange={(e) => setFormData({ ...formData, lokasi: e.target.value })}
-                    className="w-full px-3 py-1.5 border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Poin Kehadiran</label>
-                  <input
-                    type="number"
-                    value={formData.poinKehadiran}
-                    onChange={(e) => setFormData({ ...formData, poinKehadiran: parseInt(e.target.value) })}
-                    className="w-full px-3 py-1.5 border rounded-lg"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block font-semibold text-slate-700 mb-1">Pemateri / Narasumber</label>
-                  <input
-                    type="text"
-                    value={formData.pemateri}
-                    onChange={(e) => setFormData({ ...formData, pemateri: e.target.value })}
-                    className="w-full px-3 py-1.5 border rounded-lg"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block font-semibold text-slate-700 mb-1">Deskripsi Kegiatan</label>
-                  <textarea
-                    rows={2}
-                    value={formData.deskripsi}
-                    onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
-                    placeholder="Materi mengenai adab penuntut ilmu dan kontribusi sosial..."
-                    className="w-full px-3 py-1.5 border rounded-lg"
-                  />
-                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Lokasi / Tautan Kegiatan</label>
+                <input
+                  type="text"
+                  value={formData.lokasi}
+                  onChange={(e) => setFormData({ ...formData, lokasi: e.target.value })}
+                  placeholder="Masjid Raya Al-Ikhwan / Zoom Meeting"
+                  className="w-full px-3 py-1.5 border rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Deskripsi & Pokok Bahasan</label>
+                <textarea
+                  rows={3}
+                  value={formData.deskripsi}
+                  onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
+                  placeholder="Materi akidah, akhlak, dan manajemen waktu bagi kader..."
+                  className="w-full px-3 py-1.5 border rounded-lg"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="wajibSemua"
+                  checked={formData.wajibSemua}
+                  onChange={(e) => setFormData({ ...formData, wajibSemua: e.target.checked })}
+                  className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                />
+                <label htmlFor="wajibSemua" className="text-xs text-slate-700 font-medium cursor-pointer">
+                  Wajib dihadiri seluruh penerima beasiswa
+                </label>
               </div>
 
               <div className="pt-3 border-t flex justify-end gap-2">
@@ -258,7 +289,7 @@ export const KaderisasiPage: React.FC = () => {
                   disabled={modalLoading}
                   className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition disabled:opacity-50"
                 >
-                  {modalLoading ? 'Menyimpan...' : 'Jadwalkan Agenda'}
+                  {modalLoading ? 'Menyimpan...' : 'Simpan Agenda'}
                 </button>
               </div>
             </form>

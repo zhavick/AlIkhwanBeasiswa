@@ -17,6 +17,8 @@ public class PengurusDto
     public DateTime? TanggalAkhirMenjabat { get; set; }
     public bool StatusAktif { get; set; }
     public string? FotoProfilUrl { get; set; }
+    public List<string> Roles { get; set; } = new();
+    public List<int> RoleIds { get; set; } = new();
 }
 
 public class CreatePengurusRequestDto

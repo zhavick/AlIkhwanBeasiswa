@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -10,14 +10,18 @@ import {
   Mail,
   Phone,
   FileQuestion,
+  Clock,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const PortalHelpdeskPage: React.FC = () => {
   const { user } = useAuth();
   const [subjek, setSubjek] = useState('');
   const [pesan, setPesan] = useState('');
+  const [kategori, setKategori] = useState('Kendala Pengajuan');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [myTickets, setMyTickets] = useState<any[]>([]);
 
   const faqs = [
     {
@@ -26,7 +30,7 @@ export const PortalHelpdeskPage: React.FC = () => {
     },
     {
       q: 'Kapan jadwal pengumuman hasil seleksi beasiswa?',
-      a: 'Hasil verifikasi administrasi dan persetujuan bertahap diumumkan secara berkala melalui menu "Status Pengajuan" dalam tempo 7-14 hari kerja setelah periode pendaftaran ditutup.',
+      a: 'Hasil verifikasi administrasi dan persetujuan bertahap diumumkan secara berkala melalui menu "Status Beasiswa" setelah periode pendaftaran ditutup.',
     },
     {
       q: 'Apakah penerima beasiswa wajib mengikuti kegiatan kaderisasi?',
@@ -38,20 +42,33 @@ export const PortalHelpdeskPage: React.FC = () => {
     },
   ];
 
+  const fetchMyTickets = async () => {
+    try {
+      const res = await api.get('/portal-cms/helpdesk/my');
+      setMyTickets(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMyTickets();
+  }, [user]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post('/portal-cms/helpdesk/tiket', {
-        namaPengirim: user?.namaLengkap || 'Siswa / Mahasiswa',
-        emailPengirim: user?.email || 'penerima@alikhwan.id',
+      await api.post('/portal-cms/helpdesk', {
         subjek,
         pesan,
+        kategori,
       });
       setSuccess(true);
       setSubjek('');
       setPesan('');
       setTimeout(() => setSuccess(false), 4000);
+      fetchMyTickets();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Gagal mengirim tiket pertanyaan.');
     } finally {
@@ -98,10 +115,43 @@ export const PortalHelpdeskPage: React.FC = () => {
               </p>
             </div>
           </div>
+
+          {/* Riwayat Tiket Saya */}
+          {myTickets.length > 0 && (
+            <div className="pt-4 space-y-3">
+              <h3 className="font-bold text-xs text-slate-800 flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Riwayat Tiket Pertanyaan Saya ({myTickets.length})</span>
+              </h3>
+              <div className="space-y-2">
+                {myTickets.map((t) => (
+                  <div key={t.tiketId} className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs text-xs space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800">{t.subjek}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        t.statusTiket === 2 || t.statusTiket === 'Dijawab'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {t.statusTiket === 2 || t.statusTiket === 'Dijawab' ? 'Dijawab Admin' : 'Menunggu Respons'}
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-[11px]">{t.pesan}</p>
+                    {t.jawabanAdmin && (
+                      <div className="mt-2 p-2.5 bg-slate-50 border-l-2 border-emerald-500 rounded text-[11px] text-slate-700">
+                        <span className="font-semibold block text-emerald-800">Jawaban Staf Yayasan ({t.dijawabOleh || 'Admin'}):</span>
+                        <p className="mt-0.5">{t.jawabanAdmin}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Kirim Tiket */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-xs p-6 flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-xs p-6 flex flex-col justify-between h-fit">
           <div>
             <h2 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-emerald-600" />
@@ -119,6 +169,20 @@ export const PortalHelpdeskPage: React.FC = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Kategori Pertanyaan *</label>
+                <select
+                  value={kategori}
+                  onChange={(e) => setKategori(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg bg-white"
+                >
+                  <option value="Kendala Pengajuan">Kendala Pengajuan & Berkas</option>
+                  <option value="Pencairan Dana">Pencairan Dana Beasiswa</option>
+                  <option value="Kaderisasi">Kegiatan Kaderisasi & Presensi</option>
+                  <option value="Lainnya">Pertanyaan Umum Lainnya</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Subjek / Topik *</label>
                 <input
